@@ -9,7 +9,8 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "vitest run",
+    "baseline": "node --env-file=.env --import tsx evaluation/baseline/run-baseline.ts"
   },
   "repository": {
     "type": "git",
@@ -23,8 +24,12 @@
   },
   "homepage": "https://github.com/jessicafram/midpath-ai#readme",
   "devDependencies": {
-    "@types/node": "^26.4.0",
+    "@types/node": "^26.0.0",
+    "tsx": "^4.23.12",
     "typescript": "^7.0.2",
     "vitest": "^4.1.11"
+  },
+  "dependencies": {
+    "@google/genai": "^2.19.0"
   }
 }

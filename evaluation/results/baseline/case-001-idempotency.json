@@ -1,0 +1,122 @@
+{
+  "case_id": "case-001-idempotency",
+  "competency_assessments": [
+    {
+      "competency": "REST_API",
+      "level": 2,
+      "evidence": [
+        {
+          "artifact": "artifacts/payment-service.ts",
+          "observation": "Defines CreatePaymentInput and performs validation for required idempotency key, positive finite amount, and 3-character currency code."
+        }
+      ],
+      "missing_evidence": [
+        "HTTP semantics, status code mappings, or REST framework integration.",
+        "Structured error contracts or domain-specific error classes."
+      ],
+      "justification": "The service defines request contracts and basic validation logic, but lacks higher-level API semantics like HTTP status mapping or structured error contracts."
+    },
+    {
+      "competency": "PERSISTENCE",
+      "level": 2,
+      "evidence": [
+        {
+          "artifact": "artifacts/payment-service.ts",
+          "observation": "Abstracts storage operations using PaymentRepository and IdempotencyRepository interfaces and persists payment and idempotency data."
+        }
+      ],
+      "missing_evidence": [
+        "Transactional boundary wrapping both payment creation and idempotency record storage.",
+        "Database constraints such as unique indexes on idempotency keys."
+      ],
+      "justification": "Persistence logic works for basic execution paths, but lacks atomicity across the two repository calls and does not demonstrate relational constraints."
+    },
+    {
+      "competency": "TESTING",
+      "level": 2,
+      "evidence": [
+        {
+          "artifact": "artifacts/payment-service.test.ts",
+          "observation": "Tests happy-path payment creation, sequential idempotency key reuse, missing key rejection, invalid amount rejection, and currency capitalization."
+        }
+      ],
+      "missing_evidence": [
+        "Automated tests for invalid currency length validation failure.",
+        "Automated tests for payload mismatch on idempotency key reuse.",
+        "Automated tests for concurrent request processing or repository failures."
+      ],
+      "justification": "The test suite covers standard success paths and basic validation errors, but leaves important edge cases and concurrency conditions unverified."
+    },
+    {
+      "competency": "ERROR_HANDLING",
+      "level": 2,
+      "evidence": [
+        {
+          "artifact": "artifacts/payment-service.ts",
+          "observation": "Throws standard Error exceptions when mandatory input fields like idempotencyKey, amount, or currency fail validation checks."
+        }
+      ],
+      "missing_evidence": [
+        "Handling or rollback logic when idempotencyRepository.save fails after payment creation.",
+        "Detection and handling of payload mismatches for reused idempotency keys.",
+        "Custom error types or structured error objects."
+      ],
+      "justification": "Validation errors are handled with explicit exception checks, but partial failure modes during persistence and key mismatch scenarios are unhandled."
+    },
+    {
+      "competency": "IDEMPOTENCY_RELIABILITY",
+      "level": 2,
+      "evidence": [
+        {
+          "artifact": "artifacts/payment-service.ts",
+          "observation": "Queries IdempotencyRepository before creating a payment and returns the existing payment if found."
+        },
+        {
+          "artifact": "artifacts/payment-service.test.ts",
+          "observation": "Includes a passing test verifying that repeating a call with the same key returns the existing payment."
+        }
+      ],
+      "missing_evidence": [
+        "Concurrency controls (e.g., locking or unique constraints) to prevent race conditions during simultaneous requests.",
+        "Validation that request parameters match the stored record when an idempotency key is reused.",
+        "Atomic state updates to prevent payments from being created without an idempotency record on partial failure."
+      ],
+      "justification": "Sequential retries work correctly under normal conditions, but missing atomicity and concurrency controls prevent stronger reliability guarantees."
+    }
+  ],
+  "critical_findings": [
+    {
+      "severity": "high",
+      "competency": "IDEMPOTENCY_RELIABILITY",
+      "summary": "Potential duplicate payment creation under concurrent execution",
+      "evidence": [
+        {
+          "artifact": "artifacts/payment-service.ts",
+          "observation": "The check (findByKey) and write (create + save) operations are separate non-atomic steps. Concurrent requests with the same key can both read null and create duplicate payments."
+        }
+      ]
+    },
+    {
+      "severity": "medium",
+      "competency": "PERSISTENCE",
+      "summary": "Non-atomic state updates can cause orphaned payments on save failure",
+      "evidence": [
+        {
+          "artifact": "artifacts/payment-service.ts",
+          "observation": "paymentRepository.create is executed before idempotencyRepository.save without a shared transaction. If save throws an error, the payment exists in paymentRepository without an idempotency record."
+        }
+      ]
+    },
+    {
+      "severity": "medium",
+      "competency": "IDEMPOTENCY_RELIABILITY",
+      "summary": "Reused idempotency keys return existing payments without validating request payload equality",
+      "evidence": [
+        {
+          "artifact": "artifacts/payment-service.ts",
+          "observation": "If a client reuses an idempotency key with different amount or currency values, the service returns the existing record without throwing a payload mismatch error."
+        }
+      ]
+    }
+  ]
+}
