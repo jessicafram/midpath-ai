@@ -1,0 +1,125 @@
+{
+    "case_id": "case-001-idempotency",
+    "case_version": "1.0.0",
+    "rubric_version": "1.0.0",
+    "difficulty": "challenging",
+    "competency_assessments": [
+        {
+            "competency": "REST_API",
+            "expected_level": 2,
+            "label": "Partial Evidence",
+            "supported_evidence": [
+                {
+                    "artifact": "artifacts/payment-service.ts",
+                    "observation": "The service requires an idempotency key and validates payment amount and currency."
+                }
+            ],
+            "missing_evidence": [
+                "HTTP transport-level contract",
+                "status-code semantics",
+                "structured API error responses"
+            ],
+            "justification": "The service demonstrates meaningful request validation and an application-level contract, but the artifacts do not demonstrate a complete HTTP API contract."
+        },
+        {
+            "competency": "PERSISTENCE",
+            "expected_level": 1,
+            "label": "Weak Evidence",
+            "supported_evidence": [
+                {
+                    "artifact": "artifacts/payment-service.ts",
+                    "observation": "The implementation defines repositories for payment creation and idempotency records."
+                }
+            ],
+            "missing_evidence": [
+                "transaction boundary",
+                "database uniqueness constraint",
+                "atomic check-and-create operation",
+                "rollback behavior"
+            ],
+            "justification": "Persistence abstractions are present, but the submitted artifacts do not demonstrate the consistency and atomicity guarantees required for stronger evidence."
+        },
+        {
+            "competency": "TESTING",
+            "expected_level": 2,
+            "label": "Partial Evidence",
+            "supported_evidence": [
+                {
+                    "artifact": "artifacts/payment-service.test.ts",
+                    "observation": "The test suite verifies payment creation, sequential idempotent reuse, missing idempotency keys, invalid amounts, and currency normalization."
+                }
+            ],
+            "missing_evidence": [
+                "concurrent duplicate-request test",
+                "repository failure test",
+                "partial-failure test",
+                "rollback verification"
+            ],
+            "justification": "The suite demonstrates several important common behaviors, but does not exercise critical reliability and failure scenarios."
+        },
+        {
+            "competency": "ERROR_HANDLING",
+            "expected_level": 2,
+            "label": "Partial Evidence",
+            "supported_evidence": [
+                {
+                    "artifact": "artifacts/payment-service.ts",
+                    "observation": "The service explicitly rejects missing idempotency keys, non-positive amounts, and malformed currency values."
+                },
+                {
+                    "artifact": "artifacts/payment-service.test.ts",
+                    "observation": "Tests verify rejection of a missing idempotency key and an invalid amount."
+                }
+            ],
+            "missing_evidence": [
+                "repository failure handling",
+                "partial persistence failure handling",
+                "rollback or recovery behavior",
+                "structured error taxonomy"
+            ],
+            "justification": "Input validation is demonstrated, but operational and partial-failure handling are not sufficiently evidenced."
+        },
+        {
+            "competency": "IDEMPOTENCY_RELIABILITY",
+            "expected_level": 1,
+            "label": "Weak Evidence",
+            "supported_evidence": [
+                {
+                    "artifact": "artifacts/payment-service.ts",
+                    "observation": "The service checks for an existing idempotency record and returns the previously created payment when one is found."
+                },
+                {
+                    "artifact": "artifacts/payment-service.test.ts",
+                    "observation": "A sequential duplicate request is verified to return the original payment without creating a second payment."
+                }
+            ],
+            "missing_evidence": [
+                "atomic idempotency claim",
+                "concurrency-safe duplicate protection",
+                "database-level uniqueness guarantee",
+                "concurrent duplicate-request test"
+            ],
+            "justification": "Sequential retries are handled, but the check, payment creation, and idempotency-record persistence are separate operations. The artifacts therefore do not demonstrate protection against concurrent duplicate processing."
+        }
+    ],
+    "critical_finding": {
+        "id": "IDEMPOTENCY_RACE_CONDITION",
+        "severity": "high",
+        "competency": "IDEMPOTENCY_RELIABILITY",
+        "summary": "The idempotency workflow is not demonstrated to be atomic.",
+        "evidence": [
+            {
+                "artifact": "artifacts/payment-service.ts",
+                "observation": "The service first calls findByKey(), then creates the payment, and only afterward saves the idempotency record."
+            }
+        ],
+        "failure_scenario": [
+            "Request A checks the idempotency key and finds no record.",
+            "Request B checks the same key before Request A persists its record and also finds no record.",
+            "Request A creates a payment.",
+            "Request B creates another payment.",
+            "Both requests subsequently attempt to persist the idempotency record."
+        ],
+        "expected_diagnostic_conclusion": "The implementation demonstrates sequential idempotency behavior but does not provide sufficient evidence of concurrency-safe idempotency."
+    }
+}

@@ -1,0 +1,118 @@
+{
+    "rubric_version": "1.0.0",
+    "scale": {
+        "0": {
+            "label": "No Evidence",
+            "description": "No artifact demonstrates the competency."
+        },
+        "1": {
+            "label": "Weak Evidence",
+            "description": "Some relevant implementation exists, but important correctness, completeness, or reliability gaps remain."
+        },
+        "2": {
+            "label": "Partial Evidence",
+            "description": "The competency is demonstrated in common scenarios, but important edge cases, failure modes, or production concerns remain."
+        },
+        "3": {
+            "label": "Strong Evidence",
+            "description": "The available artifacts demonstrate the competency reliably, including relevant failure modes, edge cases, and engineering safeguards."
+        }
+    },
+    "competencies": [
+        {
+            "code": "REST_API",
+            "name": "REST API Design & Contracts",
+            "description": "Ability to define clear request contracts, validate input, and apply consistent API semantics.",
+            "criteria": {
+                "0": [
+                    "No meaningful request or API contract is demonstrated."
+                ],
+                "1": [
+                    "Basic input handling exists, but contract validation or semantics are significantly incomplete."
+                ],
+                "2": [
+                    "The request contract and common validation behavior are demonstrated, but some important API-level concerns remain."
+                ],
+                "3": [
+                    "The artifacts demonstrate a clear, consistent, validated API contract with appropriate success and failure semantics."
+                ]
+            }
+        },
+        {
+            "code": "PERSISTENCE",
+            "name": "Data Persistence & Relational Modeling",
+            "description": "Ability to persist state with appropriate consistency, atomicity, and relational integrity guarantees.",
+            "criteria": {
+                "0": [
+                    "No persistence behavior is demonstrated."
+                ],
+                "1": [
+                    "State is persisted or represented, but meaningful consistency guarantees are absent or unclear."
+                ],
+                "2": [
+                    "Persistence behavior is appropriate for common execution paths, but important consistency or atomicity concerns remain."
+                ],
+                "3": [
+                    "The artifacts demonstrate persistence with appropriate constraints, atomicity, consistency, and integrity guarantees for relevant scenarios."
+                ]
+            }
+        },
+        {
+            "code": "TESTING",
+            "name": "Automated Testing",
+            "description": "Ability to validate expected behavior, failures, and important edge cases through automated tests.",
+            "criteria": {
+                "0": [
+                    "No automated tests are provided."
+                ],
+                "1": [
+                    "Only minimal or happy-path behavior is tested."
+                ],
+                "2": [
+                    "Common success and failure scenarios are tested, but important edge cases remain unverified."
+                ],
+                "3": [
+                    "The test suite demonstrates success paths, failures, boundary conditions, and relevant reliability or concurrency scenarios."
+                ]
+            }
+        },
+        {
+            "code": "ERROR_HANDLING",
+            "name": "Error Handling",
+            "description": "Ability to detect, represent, and safely handle invalid input and operational failure conditions.",
+            "criteria": {
+                "0": [
+                    "Failures or invalid input are not meaningfully handled."
+                ],
+                "1": [
+                    "Some errors are detected, but handling is incomplete, inconsistent, or unsafe."
+                ],
+                "2": [
+                    "Common validation and operational errors are handled, but important failure scenarios remain unaddressed."
+                ],
+                "3": [
+                    "The artifacts demonstrate consistent and safe handling of relevant validation, operational, and partial-failure scenarios."
+                ]
+            }
+        },
+        {
+            "code": "IDEMPOTENCY_RELIABILITY",
+            "name": "Idempotency & Reliability",
+            "description": "Ability to prevent duplicate processing and preserve correct behavior across retries and relevant failure scenarios.",
+            "criteria": {
+                "0": [
+                    "No idempotency or duplicate-processing protection is demonstrated."
+                ],
+                "1": [
+                    "An idempotency mechanism is attempted, but important correctness or reliability gaps remain."
+                ],
+                "2": [
+                    "Repeated requests are handled correctly in common scenarios, but stronger reliability guarantees are not fully demonstrated."
+                ],
+                "3": [
+                    "The artifacts demonstrate reliable duplicate-processing protection across relevant retries, concurrent execution, and failure scenarios."
+                ]
+            }
+        }
+    ]
+}
