@@ -1,0 +1,225 @@
+{
+  "caseId": "case-001-idempotency",
+  "model": "gemini-3.6-flash",
+  "workflow": {
+    "evidenceAnalysis": {
+      "caseId": "case-001-idempotency",
+      "evidence": [
+        {
+          "id": "E1",
+          "artifact": "artifacts/payment-service.ts",
+          "observation": "PaymentService.createPayment validates input parameters and throws errors if idempotencyKey is missing, amount is non-finite or <= 0, or trimmed currency length is not equal to 3.",
+          "evidenceType": "implementation",
+          "confidence": 1
+        },
+        {
+          "id": "E2",
+          "artifact": "artifacts/payment-service.ts",
+          "observation": "PaymentService normalizes the currency string to uppercase before calling paymentRepository.create.",
+          "evidenceType": "implementation",
+          "confidence": 1
+        },
+        {
+          "id": "E3",
+          "artifact": "artifacts/payment-service.ts",
+          "observation": "PaymentService queries idempotencyRepository.findByKey prior to payment creation, returning existingRecord.payment if present, and calls idempotencyRepository.save after creating a new payment.",
+          "evidenceType": "implementation",
+          "confidence": 1
+        },
+        {
+          "id": "E4",
+          "artifact": "artifacts/payment-service.test.ts",
+          "observation": "The test suite exercises payment creation, sequential reuse of an idempotency key, rejection of missing idempotency keys, rejection of zero amount payments, and currency normalization to uppercase.",
+          "evidenceType": "test",
+          "confidence": 1
+        },
+        {
+          "id": "E5",
+          "artifact": "artifacts/payment-service.ts",
+          "observation": "Payment creation via paymentRepository.create and record persistence via idempotencyRepository.save are separate operations without transactional atomicity or rollback mechanisms.",
+          "evidenceType": "missing",
+          "confidence": 1
+        },
+        {
+          "id": "E6",
+          "artifact": "artifacts/payment-service.ts",
+          "observation": "PaymentService returns existingRecord.payment on key match without checking whether the request input (amount, currency) matches the payload of the original request.",
+          "evidenceType": "missing",
+          "confidence": 1
+        },
+        {
+          "id": "E7",
+          "artifact": "artifacts/payment-service.ts",
+          "observation": "No locking, locking strategy, or mutex mechanisms are implemented to prevent concurrent requests with the exact same idempotency key from executing duplicate payment creations.",
+          "evidenceType": "missing",
+          "confidence": 1
+        },
+        {
+          "id": "E8",
+          "artifact": "artifacts/payment-service.test.ts",
+          "observation": "The test suite does not include test cases for invalid currency rejection, concurrent request execution, or repository failure handling.",
+          "evidenceType": "missing",
+          "confidence": 1
+        }
+      ]
+    },
+    "competencyMapping": {
+      "caseId": "case-001-idempotency",
+      "assessments": [
+        {
+          "competency": "REST_API",
+          "level": 2,
+          "evidenceIds": [
+            "E1",
+            "E2"
+          ],
+          "missingEvidence": [
+            "Validation of request payload matching (amount, currency) on idempotency key reuse (E6)"
+          ],
+          "justification": "The service demonstrates request contract validation for parameters such as missing idempotency keys, non-finite/non-positive amounts, and currency string length, as well as currency normalization (E1, E2). However, it returns existing records on key match without verifying payload consistency against original requests (E6)."
+        },
+        {
+          "competency": "PERSISTENCE",
+          "level": 2,
+          "evidenceIds": [
+            "E3"
+          ],
+          "missingEvidence": [
+            "Transactional atomicity or rollback mechanisms between payment creation and idempotency persistence (E5)"
+          ],
+          "justification": "Persistence logic queries idempotency state prior to payment creation and saves the idempotency record afterwards for common execution paths (E3). However, payment creation and idempotency persistence run as separate operations without transactional guarantees or rollback mechanisms (E5)."
+        },
+        {
+          "competency": "TESTING",
+          "level": 2,
+          "evidenceIds": [
+            "E4"
+          ],
+          "missingEvidence": [
+            "Automated tests for invalid currency rejection, concurrent request execution, and repository failure handling (E8)"
+          ],
+          "justification": "The test suite covers basic creation, sequential idempotency key reuse, missing key rejection, zero amount rejection, and currency normalization (E4). Edge cases and reliability scenarios such as concurrency, repository failures, and invalid currency rejection remain untested (E8)."
+        },
+        {
+          "competency": "ERROR_HANDLING",
+          "level": 2,
+          "evidenceIds": [
+            "E1"
+          ],
+          "missingEvidence": [
+            "Handling and rollback mechanisms for partial operations and operational failure scenarios (E5, E8)"
+          ],
+          "justification": "Common input validation errors are detected and thrown appropriately (E1). Operational failures, repository exceptions, and partial-failure rollback handling are not addressed (E5, E8)."
+        },
+        {
+          "competency": "IDEMPOTENCY_RELIABILITY",
+          "level": 2,
+          "evidenceIds": [
+            "E3",
+            "E4"
+          ],
+          "missingEvidence": [
+            "Concurrency control mechanisms to prevent race conditions (E7)",
+            "Payload mismatch detection on key reuse (E6)",
+            "Transactional atomicity during operation failures (E5)"
+          ],
+          "justification": "Repeated sequential requests using an idempotency key are handled correctly by querying and returning stored records (E3, E4). However, stronger reliability guarantees are absent due to the lack of concurrency locking (E7), payload consistency checks (E6), and atomic persistence safeguards (E5)."
+        }
+      ]
+    },
+    "verification": {
+      "caseId": "case-001-idempotency",
+      "assessments": [
+        {
+          "competency": "REST_API",
+          "level": 2,
+          "evidenceIds": [
+            "E1",
+            "E2"
+          ],
+          "missingEvidence": [
+            "Validation of request payload matching (amount, currency) on idempotency key reuse (E6)"
+          ],
+          "justification": "The service demonstrates request contract validation for parameters such as missing idempotency keys, non-finite/non-positive amounts, and currency string length, as well as currency normalization (E1, E2). However, it returns existing records on key match without verifying payload consistency against original requests (E6)."
+        },
+        {
+          "competency": "PERSISTENCE",
+          "level": 2,
+          "evidenceIds": [
+            "E3"
+          ],
+          "missingEvidence": [
+            "Transactional atomicity or rollback mechanisms between payment creation and idempotency persistence (E5)"
+          ],
+          "justification": "Persistence logic queries idempotency state prior to payment creation and saves the idempotency record afterwards for common execution paths (E3). However, payment creation and idempotency persistence run as separate operations without transactional guarantees or rollback mechanisms (E5)."
+        },
+        {
+          "competency": "TESTING",
+          "level": 2,
+          "evidenceIds": [
+            "E4"
+          ],
+          "missingEvidence": [
+            "Automated tests for invalid currency rejection, concurrent request execution, and repository failure handling (E8)"
+          ],
+          "justification": "The test suite covers basic creation, sequential idempotency key reuse, missing key rejection, zero amount rejection, and currency normalization (E4). Edge cases and reliability scenarios such as concurrency, repository failures, and invalid currency rejection remain untested (E8)."
+        },
+        {
+          "competency": "ERROR_HANDLING",
+          "level": 2,
+          "evidenceIds": [
+            "E1"
+          ],
+          "missingEvidence": [
+            "Handling and rollback mechanisms for partial operations and operational failure scenarios (E5, E8)"
+          ],
+          "justification": "Common input validation errors are detected and thrown appropriately (E1). Operational failures, repository exceptions, and partial-failure rollback handling are not addressed (E5, E8)."
+        },
+        {
+          "competency": "IDEMPOTENCY_RELIABILITY",
+          "level": 2,
+          "evidenceIds": [
+            "E3",
+            "E4"
+          ],
+          "missingEvidence": [
+            "Concurrency control mechanisms to prevent race conditions (E7)",
+            "Payload mismatch detection on key reuse (E6)",
+            "Transactional atomicity during operation failures (E5)"
+          ],
+          "justification": "Repeated sequential requests using an idempotency key are handled correctly by querying and returning stored records (E3, E4). However, stronger reliability guarantees are absent due to the lack of concurrency locking (E7), payload consistency checks (E6), and atomic persistence safeguards (E5)."
+        }
+      ],
+      "criticalFindings": [
+        {
+          "severity": "high",
+          "competency": "IDEMPOTENCY_RELIABILITY",
+          "summary": "Lack of locking or concurrency control allows race conditions where concurrent requests with the same idempotency key can execute duplicate payment creations.",
+          "evidenceIds": [
+            "E7"
+          ]
+        },
+        {
+          "severity": "high",
+          "competency": "PERSISTENCE",
+          "summary": "Payment creation and idempotency record persistence are separate non-atomic operations, risking inconsistent state if persistence fails after payment creation.",
+          "evidenceIds": [
+            "E5"
+          ]
+        },
+        {
+          "severity": "medium",
+          "competency": "REST_API",
+          "summary": "Reusing an idempotency key with modified request parameters (amount, currency) returns the original payment without validating payload consistency.",
+          "evidenceIds": [
+            "E6"
+          ]
+        }
+      ],
+      "verificationNotes": [
+        "All mapped assessments are fully justified by evidence IDs E1-E8 and align accurately with rubric Level 2 criteria across all assessed competencies.",
+        "Critical engineering findings regarding missing concurrency controls, atomicity, and payload matching were identified and confirmed against evidence E5, E6, and E7."
+      ]
+    }
+  }
+}

@@ -10,7 +10,8 @@
   },
   "scripts": {
     "test": "vitest run",
-    "baseline": "node --env-file=.env --import tsx evaluation/baseline/run-baseline.ts"
+    "baseline": "node --env-file=.env --import tsx evaluation/baseline/run-baseline.ts",
+    "midpath": "node --env-file=.env --import tsx src/application/evaluation/run-midpath.ts"
   },
   "repository": {
     "type": "git",
