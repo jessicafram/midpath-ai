@@ -1,0 +1,93 @@
+{
+  "case_id": "case-003-authorization-boundary",
+  "competency_assessments": [
+    {
+      "competency": "REST_API",
+      "level": 1,
+      "evidence": [
+        {
+          "artifact": "artifacts/profile-service.ts",
+          "observation": "ProfileService.updateProfile validates non-empty strings for inputs using trim(), but uses generic Error exceptions and omits authorization checks from the API contract."
+        }
+      ],
+      "missing_evidence": [
+        "Structured or typed domain errors for API responses",
+        "Authorization validation enforced as part of the service API contract"
+      ],
+      "justification": "Basic service input validation is present, but important contract concerns like authorization enforcement and structured error types are missing."
+    },
+    {
+      "competency": "PERSISTENCE",
+      "level": 1,
+      "evidence": [
+        {
+          "artifact": "artifacts/profile-service.ts",
+          "observation": "The service calls profileRepository.findById(profileId) and then profileRepository.update(profile.id, { displayName }), but does not enforce ownership boundaries at the persistence interface or verify ownerId before executing the update."
+        }
+      ],
+      "missing_evidence": [
+        "Repository update operations scoped by owner ID or tenancy boundary",
+        "Safeguards against unauthorized or concurrent mutations at the persistence layer"
+      ],
+      "justification": "Persistence operations exist for reading and updating profiles, but resource boundary and owner access checks are missing."
+    },
+    {
+      "competency": "TESTING",
+      "level": 2,
+      "evidence": [
+        {
+          "artifact": "artifacts/profile-service.test.ts",
+          "observation": "Tests cover successful updates, missing input fields (authenticatedUserId, profileId, displayName), and missing profile handling, but do not include any tests attempting to update a profile with an unauthorized authenticatedUserId."
+        }
+      ],
+      "missing_evidence": [
+        "Test cases verifying access control when authenticatedUserId does not match profile.ownerId",
+        "Test assertions confirming forbidden access or authorization failure exceptions"
+      ],
+      "justification": "Tests cover standard success and common failure scenarios (input validation and missing resources), but omit ownership and access-control edge cases."
+    },
+    {
+      "competency": "ERROR_HANDLING",
+      "level": 1,
+      "evidence": [
+        {
+          "artifact": "artifacts/profile-service.ts",
+          "observation": "Input validation and missing profile failures throw untyped Error instances ('Profile not found', 'Display name is required'). Unauthorized access attempts trigger no error and proceed to update the resource."
+        }
+      ],
+      "missing_evidence": [
+        "Explicit error handling or exceptions for forbidden access / authorization failures",
+        "Typed or distinct error classes separating validation, missing resource, and unauthorized access"
+      ],
+      "justification": "Some basic validation and missing resource errors are handled, but authorization and resource-boundary failures are completely unhandled."
+    },
+    {
+      "competency": "AUTHORIZATION_RELIABILITY",
+      "level": 1,
+      "evidence": [
+        {
+          "artifact": "artifacts/profile-service.ts",
+          "observation": "Input contains authenticatedUserId, but updateProfile only verifies that it is a non-empty string and never compares it against profile.ownerId before performing the update."
+        }
+      ],
+      "missing_evidence": [
+        "Implementation check verifying authenticatedUserId matches profile.ownerId",
+        "Tests demonstrating authorization enforcement when a user attempts to update a profile they do not own"
+      ],
+      "justification": "Authentication context is passed into the service input, but access to the target profile is not constrained to the authorized owner."
+    }
+  ],
+  "critical_findings": [
+    {
+      "severity": "critical",
+      "competency": "AUTHORIZATION_RELIABILITY",
+      "summary": "Missing resource ownership check allows any authenticated user to modify any profile.",
+      "evidence": [
+        {
+          "artifact": "artifacts/profile-service.ts",
+          "observation": "The method updateProfile accepts input.authenticatedUserId and fetches profile, but never compares input.authenticatedUserId against profile.ownerId before invoking profileRepository.update."
+        }
+      ]
+    }
+  ]
+}
