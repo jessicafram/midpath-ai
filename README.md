@@ -381,3 +381,205 @@ Quota exhaustion is treated as non-retryable, preventing repeated requests when 
 This behavior keeps infrastructure failure handling separate from engineering evaluation logic.
 
 The resulting `CompetencyMapping` is therefore a structured inference layer between validated engineering evidence and downstream verification.
+
+### Agent 3 — Verification Agent
+
+The **Verification Agent** is the supportability and traceability boundary of the MidPath workflow.
+
+It receives:
+
+1. the competency rubric;
+2. the validated `EvidenceAnalysis`;
+3. the `CompetencyMapping` produced by the previous stage.
+
+Like the Competency Mapper, it **does not receive the original engineering artifacts**.
+
+Its task is not to independently restart the analysis.
+
+Its task is to verify whether the existing competency conclusions remain justified by the available evidence.
+
+#### Input
+
+```ts
+{
+  caseId: string;
+  rubric: string;
+  evidenceAnalysis: EvidenceAnalysis;
+  competencyMapping: CompetencyMapping;
+}
+```
+
+This gives the Verification Agent access to both the evidence layer and the inference layer.
+
+It can therefore inspect whether competency levels, justifications, and evidence references remain consistent with the evidence that actually exists.
+
+#### Output
+
+The Verification Agent produces a structured `VerificationResult`:
+
+```ts
+{
+  caseId: string;
+
+  assessments: Array<{
+    competency: string;
+    level: number;
+    evidenceIds: string[];
+    missingEvidence: string[];
+    justification: string;
+  }>;
+
+  criticalFindings: Array<{
+    severity:
+      | "low"
+      | "medium"
+      | "high"
+      | "critical";
+    competency: string;
+    summary: string;
+    evidenceIds: string[];
+  }>;
+
+  verificationNotes: string[];
+}
+```
+
+The output therefore contains three forms of verified information:
+
+- competency assessments;
+- critical engineering findings;
+- verification notes describing important observations about the evaluation.
+
+#### Reasoning Boundary
+
+The Verification Agent answers:
+
+> **“Are these conclusions actually supported by the evidence available in this evaluation?”**
+
+It is explicitly instructed to challenge unsupported conclusions.
+
+The verification rules allow it to:
+
+- preserve a competency level when the supplied evidence supports it;
+- reduce a level when the evidence does not justify the stronger conclusion;
+- remove or correct unsupported claims;
+- identify critical engineering findings when those findings are supported by the evidence;
+- and record verification observations without inventing new artifacts or implementation details.
+
+This makes verification a separate reasoning stage rather than a request for the model to merely agree with the previous assessment.
+
+#### No Hidden Answer Access
+
+The Verification Agent is explicitly instructed not to compare the evaluation against a hidden reference answer.
+
+It receives the rubric, evidence analysis, and competency mapping — but not the benchmark gold standard.
+
+This keeps the verification stage separate from benchmark scoring.
+
+The gold standard is used later by the evaluation harness to measure the quality of the completed workflow, not by the agent to produce its answer.
+
+#### Evidence Traceability
+
+Both verified competency assessments and critical findings must use Evidence IDs produced by the Evidence Analyst.
+
+For verified assessments:
+
+```text
+Verified Assessment
+        ↓
+evidenceIds[]
+        ↓
+Validated against
+        ↓
+EvidenceAnalysis.evidence[].id
+```
+
+For critical findings:
+
+```text
+Critical Finding
+        ↓
+evidenceIds[]
+        ↓
+Validated against
+        ↓
+EvidenceAnalysis.evidence[].id
+```
+
+Unknown Evidence IDs are rejected by deterministic application validation.
+
+This creates an explicit evidence chain from the final verification output back to the structured observations produced at the beginning of the workflow.
+
+#### Critical Findings
+
+The Verification Agent can surface engineering risks using four supported severity levels:
+
+```text
+low
+medium
+high
+critical
+```
+
+Every critical finding must:
+
+- reference a competency defined in the rubric;
+- contain a textual summary;
+- use a supported severity level;
+- and reference Evidence IDs that exist in the current evidence analysis.
+
+This allows MidPath to distinguish between an ordinary competency assessment and an engineering weakness that deserves explicit attention.
+
+A critical finding is therefore not simply a lower competency score.
+
+It is a separate, evidence-linked statement about an important reliability, correctness, or engineering risk observed during verification.
+
+#### Runtime Validation
+
+MidPath validates the Verification Agent response before accepting it as the final workflow output.
+
+The implementation requires:
+
+- the expected `caseId`;
+- every rubric competency to appear exactly once;
+- no unknown or duplicate competencies;
+- integer competency levels within the supported `0..3` range;
+- valid assessment evidence references;
+- valid critical finding evidence references;
+- supported critical finding severity values;
+- critical findings to reference known rubric competencies;
+- structured `missingEvidence` collections;
+- textual assessment justifications;
+- and string-only verification notes.
+
+Malformed rubric input or structurally invalid model output is rejected.
+
+This prevents unsupported response structure from silently becoming part of the final evaluation.
+
+#### Verification as a Distinct Stage
+
+The complete reasoning path is therefore:
+
+```text
+Engineering Artifacts
+        ↓
+Evidence Analyst
+        ↓
+Validated Evidence
+        ↓
+Competency Mapper
+        ↓
+Evidence-Grounded Assessment
+        ↓
+Verification Agent
+        ↓
+Verified Assessments
++ Critical Findings
++ Verification Notes
+```
+
+The Verification Agent closes the MidPath reasoning loop by testing whether the inferred engineering judgment remains connected to the evidence from which it originated.
+
+It does not guarantee that the model's reasoning is objectively correct.
+
+It does make the reasoning **inspectable, constrained, and traceable**.
