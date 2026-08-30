@@ -1043,3 +1043,322 @@ It is:
 > “What does an explicit evidence-driven and independently verified workflow add to direct model evaluation?”
 
 The benchmark evaluates that question using the same cases, competency rubrics, gold standards, and offline scoring methodology for both evaluation paths.
+
+---
+
+## Evaluation & Scoring
+
+Benchmark outputs are evaluated offline against the predefined gold standard.
+
+The scoring layer is intentionally separated from model inference.
+
+Neither the Baseline Evaluator nor the MidPath workflow receives benchmark scores, expected competency levels, or gold-standard findings while producing an assessment.
+
+Only after an evaluation result has been recorded does the scoring harness compare it with the corresponding reference.
+
+The benchmark currently evaluates four dimensions:
+
+1. **Competency Exact Match**
+2. **Mean Absolute Error**
+3. **Critical Finding Detection**
+4. **Evidence Traceability Coverage**
+
+These metrics measure different properties of an engineering assessment and should not be collapsed into a single notion of quality.
+
+### 1. Competency Exact Match
+
+For each competency, the predicted level is compared directly with the expected gold-standard level.
+
+For competency \(i\):
+
+```text
+ExactMatch(i) =
+    1, if predictedLevel(i) = expectedLevel(i)
+    0, otherwise
+```
+
+The aggregate exact-match rate is:
+
+```text
+Exact Match Rate
+=
+Exact Competency Matches
+────────────────────────
+Total Compared Competencies
+```
+
+For example:
+
+```text
+Expected:  [2, 1, 2, 2, 1]
+Predicted: [2, 1, 2, 3, 1]
+
+Exact Matches = 4 / 5
+Exact Match Rate = 0.80
+```
+
+Exact match is deliberately strict.
+
+A prediction that differs from the reference by one level is still counted as incorrect.
+
+This makes it useful for measuring classification agreement, but it does not express how far an incorrect prediction is from the reference.
+
+### 2. Mean Absolute Error
+
+To capture the magnitude of competency-level disagreement, the benchmark also calculates **Mean Absolute Error (MAE)**.
+
+For each competency:
+
+```text
+Absolute Error
+=
+| predictedLevel - expectedLevel |
+```
+
+Across all compared competencies:
+
+```text
+MAE
+=
+Σ | predictedLevel - expectedLevel |
+───────────────────────────────────
+      Number of Competencies
+```
+
+Using the previous example:
+
+```text
+Expected:  [2, 1, 2, 2, 1]
+Predicted: [2, 1, 2, 3, 1]
+
+Absolute Errors:
+[0, 0, 0, 1, 0]
+
+MAE = 1 / 5 = 0.20
+```
+
+Lower MAE indicates closer agreement with the reference competency levels.
+
+Exact Match Rate and MAE therefore provide complementary information:
+
+| Metric | Measures | Better Direction |
+|---|---|---|
+| **Exact Match Rate** | How often the predicted level exactly matches the reference | Higher |
+| **Mean Absolute Error** | How far predictions deviate from the reference | Lower |
+
+### 3. Critical Finding Detection
+
+Each benchmark case defines one reference critical engineering finding associated with a target competency and expected severity.
+
+The scoring layer evaluates two separate questions:
+
+```text
+Was a critical finding detected
+for the expected competency?
+
+            ↓
+
+If yes, did its severity
+match the gold standard?
+```
+
+This produces:
+
+```ts
+{
+  detected: boolean;
+  severityMatched: boolean;
+}
+```
+
+A finding is considered detected when the evaluator produces a critical finding associated with the expected competency.
+
+Severity agreement is evaluated independently.
+
+This distinction matters because an evaluator can recognize the correct engineering risk category while still misjudging its severity.
+
+For example:
+
+```text
+Expected:
+AUTHORIZATION_RELIABILITY / high
+
+Produced:
+AUTHORIZATION_RELIABILITY / medium
+```
+
+would result in:
+
+```text
+detected        = true
+severityMatched = false
+```
+
+This preserves more information than reducing critical-risk evaluation to a single pass/fail value.
+
+### 4. Evidence Traceability Coverage
+
+MidPath also measures whether its downstream conclusions retain references to concrete evidence produced by the Evidence Analyst.
+
+For every MidPath result, the scoring harness first constructs the set of valid Evidence IDs from:
+
+```text
+EvidenceAnalysis.evidence[].id
+```
+
+It then checks whether each assessment or critical finding contains at least one Evidence ID that resolves to that set.
+
+Conceptually:
+
+```text
+Downstream Conclusion
+        ↓
+evidenceIds[]
+        ↓
+At least one valid reference?
+        ↓
+EvidenceAnalysis.evidence[].id
+```
+
+Traceability coverage is calculated as:
+
+```text
+Traceability Coverage
+=
+Traceable Items
+───────────────
+Total Items
+```
+
+An item is traceable when:
+
+1. it contains at least one evidence reference; and
+2. at least one referenced Evidence ID exists in the evidence analysis for that execution.
+
+MidPath reports traceability separately for:
+
+```text
+Competency Assessments
+Critical Findings
+```
+
+This prevents traceability from being hidden inside a general score.
+
+### Traceability Is Not Accuracy
+
+Traceability coverage and competency accuracy measure different properties.
+
+A conclusion can be perfectly traceable and still be incorrect.
+
+Similarly, a direct model evaluation can reach the correct answer without producing the same structured Evidence ID chain.
+
+For that reason, MidPath does **not** treat traceability coverage as a substitute for benchmark accuracy.
+
+The distinction is:
+
+```text
+Accuracy
+    ↓
+Did the conclusion match
+the benchmark reference?
+
+Traceability
+    ↓
+Can the conclusion be connected
+to concrete structured evidence?
+```
+
+The current Baseline output contains artifact-level natural-language evidence, but it does not use the same intermediate Evidence ID architecture as MidPath.
+
+Traceability coverage is therefore reported as a property of the MidPath architecture rather than presented as an apples-to-apples accuracy advantage over the Baseline.
+
+### Per-Case Aggregation
+
+The benchmark aggregator discovers available evaluation cases from:
+
+```text
+evaluation/cases/
+```
+
+and checks independently whether Baseline and MidPath outputs exist for each case.
+
+Results are loaded from:
+
+```text
+evaluation/results/baseline/
+evaluation/results/midpath/
+```
+
+For every available evaluation result, the aggregator normalizes competency assessments and compares them against that case's gold standard.
+
+The resulting per-case structure is conceptually:
+
+```ts
+{
+  caseId: string;
+
+  baseline?: {
+    competency: {
+      total: number;
+      exactMatches: number;
+      exactMatchRate: number;
+      meanAbsoluteError: number;
+    };
+
+    criticalFinding: {
+      detected: boolean;
+      severityMatched: boolean;
+    };
+  };
+
+  midpath?: {
+    competency: {
+      total: number;
+      exactMatches: number;
+      exactMatchRate: number;
+      meanAbsoluteError: number;
+    };
+
+    criticalFinding: {
+      detected: boolean;
+      severityMatched: boolean;
+    };
+
+    traceability: {
+      assessments: {
+        totalItems: number;
+        traceableItems: number;
+        coverage: number;
+      };
+
+      criticalFindings: {
+        totalItems: number;
+        traceableItems: number;
+        coverage: number;
+      };
+    };
+  };
+}
+```
+
+The use of optional Baseline and MidPath results is intentional.
+
+A case can remain part of the benchmark even when one evaluation path could not complete because of an external execution constraint.
+
+Missing output is therefore represented as **unavailable**, not silently converted into a zero score.
+
+### Metric Interpretation
+
+The benchmark metrics should be read together:
+
+| Metric | Question |
+|---|---|
+| **Exact Match Rate** | Did the competency classifications match the reference? |
+| **MAE** | How far were incorrect classifications from the reference? |
+| **Critical Finding Detection** | Did the evaluator identify the expected engineering-risk domain? |
+| **Severity Match** | Did it estimate the expected risk severity? |
+| **Traceability Coverage** | Can MidPath conclusions be resolved back to structured Evidence IDs? |
+
+No single metric is intended to establish overall superiority.
+
+The goal is to evaluate **classification quality, engineering-risk recognition, and evidence auditability as separate dimensions**.
