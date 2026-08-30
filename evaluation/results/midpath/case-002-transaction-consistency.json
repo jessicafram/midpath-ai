@@ -1,0 +1,212 @@
+{
+  "caseId": "case-002-transaction-consistency",
+  "model": "gemini-3.6-flash",
+  "workflow": {
+    "evidenceAnalysis": {
+      "caseId": "case-002-transaction-consistency",
+      "evidence": [
+        {
+          "id": "E1",
+          "artifact": "artifacts/order-service.ts",
+          "observation": "OrderService.createOrder validates input fields (customerId, productId, quantity, amount) and throws an Error when validation fails before executing any repository calls.",
+          "evidenceType": "implementation",
+          "confidence": 1
+        },
+        {
+          "id": "E2",
+          "artifact": "artifacts/order-service.ts",
+          "observation": "OrderService.createOrder invokes orderRepository.create, inventoryRepository.decrease, and paymentRepository.createAttempt sequentially across separate promise calls.",
+          "evidenceType": "implementation",
+          "confidence": 1
+        },
+        {
+          "id": "E3",
+          "artifact": "artifacts/order-service.ts",
+          "observation": "The implementation lacks transactional wrappers, error handling, or rollback/compensation logic if inventory decrease or payment attempt creation fails after order creation.",
+          "evidenceType": "missing",
+          "confidence": 1
+        },
+        {
+          "id": "E4",
+          "artifact": "artifacts/order-service.test.ts",
+          "observation": "Tests verify that createOrder invokes orderRepository, inventoryRepository, and paymentRepository methods in order under normal success conditions.",
+          "evidenceType": "test",
+          "confidence": 1
+        },
+        {
+          "id": "E5",
+          "artifact": "artifacts/order-service.test.ts",
+          "observation": "Tests verify input validation rejections for empty customerId, empty productId, non-positive/non-integer quantity, and non-positive amount.",
+          "evidenceType": "test",
+          "confidence": 1
+        },
+        {
+          "id": "E6",
+          "artifact": "artifacts/order-service.test.ts",
+          "observation": "The test suite does not include test cases for partial operation failure, repository rejections, or state cleanup when inventory or payment steps fail.",
+          "evidenceType": "missing",
+          "confidence": 1
+        }
+      ]
+    },
+    "competencyMapping": {
+      "caseId": "case-002-transaction-consistency",
+      "assessments": [
+        {
+          "competency": "REST_API",
+          "level": 2,
+          "evidenceIds": [
+            "E1",
+            "E2",
+            "E4",
+            "E5"
+          ],
+          "missingEvidence": [
+            "Handling for backend/repository failure scenarios and consistency guarantees during execution."
+          ],
+          "justification": "The service validates input fields and executes the expected order creation flow across repositories for common happy path scenarios, supported by unit tests. However, robust edge-case handling and consistency guarantees under downstream failure are missing."
+        },
+        {
+          "competency": "PERSISTENCE",
+          "level": 1,
+          "evidenceIds": [
+            "E2"
+          ],
+          "missingEvidence": [
+            "Transactional wrappers, compensation mechanisms, or atomic write coordination across repositories."
+          ],
+          "justification": "Multiple persistence operations are executed sequentially across separate repositories, but they lack transactional boundary coordination or rollback mechanisms to prevent partial state on failure."
+        },
+        {
+          "competency": "TESTING",
+          "level": 2,
+          "evidenceIds": [
+            "E4",
+            "E5"
+          ],
+          "missingEvidence": [
+            "Test coverage for repository rejections, partial execution failure, and recovery/cleanup."
+          ],
+          "justification": "Tests cover normal success execution order and common input validation failure scenarios, but fail to cover edge cases such as repository errors or partial failure states."
+        },
+        {
+          "competency": "ERROR_HANDLING",
+          "level": 1,
+          "evidenceIds": [
+            "E1",
+            "E2"
+          ],
+          "missingEvidence": [
+            "Error handling, catch blocks, or compensation logic for errors occurring during downstream repository calls."
+          ],
+          "justification": "Input validation errors are caught and thrown prior to persistence calls, but failures occurring during sequential database writes are unhandled, leaving the system at risk of inconsistent state."
+        },
+        {
+          "competency": "TRANSACTION_RELIABILITY",
+          "level": 1,
+          "evidenceIds": [
+            "E2"
+          ],
+          "missingEvidence": [
+            "Transaction management, atomic operation boundaries, or failure recovery/rollback implementation."
+          ],
+          "justification": "Related writes to order, inventory, and payment repositories execute independently without transaction safety, introducing a realistic risk of partial state if downstream writes fail."
+        }
+      ]
+    },
+    "verification": {
+      "caseId": "case-002-transaction-consistency",
+      "assessments": [
+        {
+          "competency": "REST_API",
+          "level": 2,
+          "evidenceIds": [
+            "E1",
+            "E2",
+            "E4",
+            "E5"
+          ],
+          "missingEvidence": [
+            "Handling for backend/repository failure scenarios and consistency guarantees during execution."
+          ],
+          "justification": "The service validates input fields and executes the expected order creation flow across repositories for common happy path scenarios, supported by unit tests. However, robust edge-case handling and consistency guarantees under downstream failure are missing."
+        },
+        {
+          "competency": "PERSISTENCE",
+          "level": 1,
+          "evidenceIds": [
+            "E2",
+            "E3"
+          ],
+          "missingEvidence": [
+            "Transactional wrappers, compensation mechanisms, or atomic write coordination across repositories."
+          ],
+          "justification": "Multiple persistence operations are executed sequentially across separate repositories, but they lack transactional boundary coordination or rollback mechanisms to prevent partial state on failure."
+        },
+        {
+          "competency": "TESTING",
+          "level": 2,
+          "evidenceIds": [
+            "E4",
+            "E5",
+            "E6"
+          ],
+          "missingEvidence": [
+            "Test coverage for repository rejections, partial execution failure, and recovery/cleanup."
+          ],
+          "justification": "Tests cover normal success execution order and common input validation failure scenarios, but fail to cover edge cases such as repository errors or partial failure states."
+        },
+        {
+          "competency": "ERROR_HANDLING",
+          "level": 1,
+          "evidenceIds": [
+            "E1",
+            "E2",
+            "E3"
+          ],
+          "missingEvidence": [
+            "Error handling, catch blocks, or compensation logic for errors occurring during downstream repository calls."
+          ],
+          "justification": "Input validation errors are caught and thrown prior to persistence calls, but failures occurring during sequential database writes are unhandled, leaving the system at risk of inconsistent state."
+        },
+        {
+          "competency": "TRANSACTION_RELIABILITY",
+          "level": 1,
+          "evidenceIds": [
+            "E2",
+            "E3"
+          ],
+          "missingEvidence": [
+            "Transaction management, atomic operation boundaries, or failure recovery/rollback implementation."
+          ],
+          "justification": "Related writes to order, inventory, and payment repositories execute independently without transaction safety, introducing a realistic risk of partial state if downstream writes fail."
+        }
+      ],
+      "criticalFindings": [
+        {
+          "severity": "high",
+          "competency": "TRANSACTION_RELIABILITY",
+          "summary": "Order creation executes sequential independent repository calls without transactional boundaries or compensation logic, creating a high risk of partial data persistence if inventory or payment operations fail.",
+          "evidenceIds": [
+            "E2",
+            "E3"
+          ]
+        },
+        {
+          "severity": "medium",
+          "competency": "TESTING",
+          "summary": "The test suite completely omits scenarios involving partial failures, repository errors, or rollback verification.",
+          "evidenceIds": [
+            "E6"
+          ]
+        }
+      ],
+      "verificationNotes": [
+        "Verified all competency levels against evidence E1 through E6.",
+        "Confirmed REST_API at Level 2 based on input validation and standard endpoint flow tests.",
+        "Confirmed TESTING at Level 2 due to coverage of happy path and validation failures, but lack of edge-case/failure mode testing.",
+        "Confirmed PERSISTENCE, ERROR_HANDLING, and TRANSACTION_RELIABILITY at Level 1 due to uncoordinated sequential writes and lack of rollback handling."
+      ]
+    }
+  }
+}

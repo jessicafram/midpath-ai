@@ -1,0 +1,92 @@
+{
+  "case_id": "case-002-transaction-consistency",
+  "competency_assessments": [
+    {
+      "competency": "REST_API",
+      "level": 2,
+      "evidence": [
+        {
+          "artifact": "artifacts/payment-service.ts",
+          "observation": "OrderService.createOrder defines a clear input/output interface and performs validation on customerId, productId, quantity, and amount before executing operations."
+        },
+        {
+          "artifact": "artifacts/payment-service.test.ts",
+          "observation": "Unit tests verify expected success responses as well as input validation error rejections."
+        }
+      ],
+      "missing_evidence": [
+        "No evidence of consistency guarantees or error contracts for partial downstream failures at the service/API layer."
+      ],
+      "justification": "The service demonstrates a reasonable API contract and expected behavior for common success and input validation scenarios, but lacks consistency handling for edge cases."
+    },
+    {
+      "competency": "PERSISTENCE",
+      "level": 1,
+      "evidence": [
+        {
+          "artifact": "artifacts/payment-service.ts",
+          "observation": "createOrder calls orderRepository.create, inventoryRepository.decrease, and paymentRepository.createAttempt as separate awaited operations."
+        }
+      ],
+      "missing_evidence": [
+        "No shared database transaction, unit of work, or rollback/compensation logic is present to ensure atomic persistence across repositories."
+      ],
+      "justification": "Persistence calls exist across three separate repositories, but they are not executed within a transaction boundary, allowing partial state to persist under failure."
+    },
+    {
+      "competency": "TESTING",
+      "level": 2,
+      "evidence": [
+        {
+          "artifact": "artifacts/payment-service.test.ts",
+          "observation": "Tests cover the successful order creation flow and four distinct input validation rejection paths."
+        }
+      ],
+      "missing_evidence": [
+        "No test cases exercise failures during repository calls (e.g., inventory repository failure or payment repository failure) to verify behavior during partial failure."
+      ],
+      "justification": "Tests cover common success and validation failure paths, but completely omit persistence failure edge cases and system transaction guarantees."
+    },
+    {
+      "competency": "ERROR_HANDLING",
+      "level": 1,
+      "evidence": [
+        {
+          "artifact": "artifacts/payment-service.ts",
+          "observation": "Input validation throws explicit errors, but repository promise rejections are not caught, compensated for, or cleaned up."
+        }
+      ],
+      "missing_evidence": [
+        "No try/catch blocks or compensating actions exist to roll back created orders or restore inventory if subsequent steps fail."
+      ],
+      "justification": "Errors from invalid inputs are thrown, but errors arising during multi-step execution propagate without cleanup, leaving the system in an inconsistent partial state."
+    },
+    {
+      "competency": "TRANSACTION_RELIABILITY",
+      "level": 1,
+      "evidence": [
+        {
+          "artifact": "artifacts/payment-service.ts",
+          "observation": "The three write operations (order creation, inventory reduction, payment attempt creation) can succeed or fail independently."
+        }
+      ],
+      "missing_evidence": [
+        "No evidence of atomic transaction coordination, saga pattern, or two-phase commit."
+      ],
+      "justification": "Multiple related database writes are invoked sequentially without atomic guarantees, creating a realistic risk of partial execution state if any intermediate step fails."
+    }
+  ],
+  "critical_findings": [
+    {
+      "severity": "high",
+      "competency": "TRANSACTION_RELIABILITY",
+      "summary": "Uncoordinated multi-step write sequence allows partial persistence state",
+      "evidence": [
+        {
+          "artifact": "artifacts/payment-service.ts",
+          "observation": "If inventoryRepository.decrease or paymentRepository.createAttempt throws an exception, previously completed operations (such as orderRepository.create) remain committed with no compensation or rollback."
+        }
+      ]
+    }
+  ]
+}
