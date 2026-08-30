@@ -716,3 +716,142 @@ Gold standards are defined before evaluator execution and completed benchmark ou
 This reduces post-hoc tuning pressure and keeps the benchmark reference independent from model output.
 
 The gold standard is therefore an **evaluation instrument**, not an input to the agentic reasoning process.
+
+## Benchmark Case Design
+
+The benchmark cases are designed to test whether an evaluator can distinguish **observable successful behavior** from **stronger engineering guarantees that are not demonstrated by the submitted artifacts**.
+
+Each case contains:
+
+- an engineering task;
+- implementation artifacts;
+- test artifacts;
+- an explicit competency rubric;
+- a predefined gold standard;
+- and one primary engineering weakness that the evaluator is expected to identify.
+
+The cases are intentionally small enough to remain inspectable, but each contains a failure mode that requires engineering judgment beyond simply observing that the provided tests pass.
+
+### Case 001 — Idempotency Reliability
+
+**Primary risk:** concurrent duplicate payment processing.
+
+The implementation correctly handles sequential requests using the same idempotency key.
+
+The supplied tests verify this behavior.
+
+However, the workflow performs the relevant operations separately:
+
+```text
+Check idempotency key
+        ↓
+Create payment
+        ↓
+Persist idempotency record
+```
+
+The submitted artifacts do not demonstrate an atomic boundary around these operations.
+
+Two concurrent requests can therefore observe the same key as absent before either request persists the idempotency record.
+
+The benchmark evaluates whether the evaluator distinguishes:
+
+> “Sequential duplicate requests are handled correctly.”
+
+from the stronger conclusion:
+
+> “Duplicate payment processing is prevented under concurrency.”
+
+The first conclusion is supported by the artifacts.
+
+The second is not.
+
+The gold-standard critical finding is therefore associated with **IDEMPOTENCY_RELIABILITY** and identifies the missing concurrency-safe idempotency guarantee.
+
+### Case 002 — Transaction Consistency
+
+**Primary risk:** partial writes across multiple persistence operations.
+
+The implementation performs several state-changing operations during a single business workflow.
+
+Conceptually:
+
+```text
+Create Order
+     ↓
+Decrease Inventory
+     ↓
+Create Payment Attempt
+```
+
+The supplied tests demonstrate the expected successful path and several input-validation behaviors.
+
+However, the submitted artifacts do not demonstrate a transaction boundary, rollback mechanism, compensation strategy, or equivalent atomicity guarantee across these writes.
+
+A failure after an earlier write can therefore leave the system in a partially updated state.
+
+The benchmark evaluates whether the evaluator distinguishes:
+
+> “The expected workflow succeeds under the tested conditions.”
+
+from:
+
+> “The workflow preserves consistency when one of its persistence operations fails.”
+
+The second guarantee requires evidence that the submitted artifacts do not provide.
+
+The gold-standard critical finding is therefore associated with **TRANSACTION_RELIABILITY** and identifies the partial-write consistency risk.
+
+### Case 003 — Authorization Boundary
+
+**Primary risk:** missing resource-level ownership validation.
+
+The implementation receives both an authenticated user identifier and a profile identifier.
+
+It validates that the user is authenticated, loads the requested profile, validates the update data, and performs the update.
+
+However, the submitted artifacts do not demonstrate that the authenticated user is verified as the owner of the profile being modified.
+
+Conceptually, the implementation establishes:
+
+```text
+Authenticated User
+        ↓
+Profile Exists
+        ↓
+Update Profile
+```
+
+but does not establish:
+
+```text
+Authenticated User
+        ↓
+Owns Requested Profile
+        ↓
+Update Profile
+```
+
+The supplied tests exercise expected update and validation behavior, but they do not exercise a cross-user ownership scenario.
+
+The benchmark therefore evaluates whether the evaluator distinguishes **authentication** from **resource-level authorization**.
+
+The gold-standard critical finding is associated with **AUTHORIZATION_RELIABILITY** and identifies the missing ownership check.
+
+### Why Multiple Cases?
+
+The three cases exercise different engineering failure classes:
+
+| Case | Engineering Domain | Hidden Gap |
+|---|---|---|
+| **001** | Idempotency / Concurrency | Sequential correctness does not establish concurrency safety |
+| **002** | Persistence / Transactions | Happy-path success does not establish atomic multi-write behavior |
+| **003** | Authorization | Authentication does not establish resource ownership |
+
+This diversity is intentional.
+
+A workflow that succeeds only on the idempotency example could simply be responding to terminology or patterns specific to that case.
+
+Using independent failure classes provides a stronger test of whether the evaluation workflow consistently applies the underlying principle:
+
+> **Observed behavior should not be promoted into a stronger engineering guarantee without supporting evidence.**
