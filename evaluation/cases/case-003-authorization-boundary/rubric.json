@@ -1,0 +1,50 @@
+{
+    "rubric_version": "1.0.0",
+    "competencies": [
+        {
+            "competency": "REST_API",
+            "levels": {
+                "0": "No meaningful API behavior is demonstrated.",
+                "1": "Basic service behavior is present, but important contract or validation concerns are missing.",
+                "2": "The service demonstrates a reasonable API contract and expected behavior for common scenarios.",
+                "3": "The service demonstrates robust API behavior, including strong validation, authorization guarantees, and well-defined edge-case handling."
+            }
+        },
+        {
+            "competency": "PERSISTENCE",
+            "levels": {
+                "0": "No meaningful persistence behavior is demonstrated.",
+                "1": "Persistence operations exist, but important resource access or update guarantees are missing.",
+                "2": "Persistence behavior is generally correct for normal execution, with reasonable safeguards demonstrated.",
+                "3": "Persistence operations demonstrate strong consistency, resource-boundary enforcement, and safe behavior across relevant edge cases."
+            }
+        },
+        {
+            "competency": "TESTING",
+            "levels": {
+                "0": "No meaningful tests are provided.",
+                "1": "Tests cover only a narrow expected flow and provide weak confidence in authorization boundaries.",
+                "2": "Tests cover common success and failure scenarios but omit important access-control or ownership edge cases.",
+                "3": "Tests provide strong evidence for normal behavior, authorization boundaries, forbidden access, validation, and relevant edge cases."
+            }
+        },
+        {
+            "competency": "ERROR_HANDLING",
+            "levels": {
+                "0": "Errors are ignored or handled in a way that makes behavior unsafe or unpredictable.",
+                "1": "Some errors are handled, but important authorization or resource-boundary failures are not demonstrated safely.",
+                "2": "Common errors are handled predictably, with some safeguards against invalid or unauthorized operations.",
+                "3": "Failure handling clearly distinguishes validation, missing resources, and forbidden operations while preserving safe behavior."
+            }
+        },
+        {
+            "competency": "AUTHORIZATION_RELIABILITY",
+            "levels": {
+                "0": "The implementation provides no meaningful evidence of authorization enforcement.",
+                "1": "Authentication context exists, but access to the target resource is not demonstrated to be constrained to the authorized owner.",
+                "2": "Authorization checks are present, but important ownership or access-control guarantees remain incomplete.",
+                "3": "The implementation demonstrates explicit and well-tested enforcement of resource ownership and authorization boundaries."
+            }
+        }
+    ]
+}

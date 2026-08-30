@@ -1,0 +1,53 @@
+{
+    "case_id": "case-003-authorization-boundary",
+    "case_version": "1.0.0",
+    "rubric_version": "1.0.0",
+    "difficulty": "challenging",
+    "competency_assessments": [
+        {
+            "competency": "REST_API",
+            "expected_level": 2,
+            "rationale": "The service demonstrates a clear resource update workflow and basic validation, but the artifacts do not demonstrate production-grade authorization guarantees across all relevant access scenarios."
+        },
+        {
+            "competency": "PERSISTENCE",
+            "expected_level": 2,
+            "rationale": "The resource update operation is straightforward and demonstrates normal persistence behavior, but persistence alone does not establish that the authenticated user is authorized to modify the selected resource."
+        },
+        {
+            "competency": "TESTING",
+            "expected_level": 1,
+            "rationale": "The tests demonstrate the expected update flow and basic validation but do not provide sufficient evidence that cross-user resource access is rejected."
+        },
+        {
+            "competency": "ERROR_HANDLING",
+            "expected_level": 1,
+            "rationale": "Basic validation and missing-resource behavior may be handled, but the artifacts do not demonstrate an explicit forbidden-access path when an authenticated user targets another user's resource."
+        },
+        {
+            "competency": "AUTHORIZATION_RELIABILITY",
+            "expected_level": 1,
+            "rationale": "An authenticated user identifier is available to the service, but the artifacts do not demonstrate that resource ownership is verified before the update is performed."
+        }
+    ],
+    "critical_finding": {
+        "id": "MISSING_RESOURCE_OWNERSHIP_CHECK",
+        "severity": "high",
+        "competency": "AUTHORIZATION_RELIABILITY",
+        "summary": "The update workflow is not demonstrated to enforce ownership of the target resource.",
+        "evidence": [
+            {
+                "artifact": "artifacts/profile-service.ts",
+                "observation": "The expected workflow receives authenticated-user context and a resource identifier but performs the update without demonstrating that the resource belongs to that authenticated user."
+            }
+        ],
+        "failure_scenario": [
+            "User A is authenticated.",
+            "User A supplies the identifier of a resource owned by User B.",
+            "The service accepts the resource identifier without verifying ownership against User A.",
+            "The persistence operation updates User B's resource.",
+            "Authentication therefore exists, but the resource-level authorization boundary is not enforced."
+        ],
+        "expected_diagnostic_conclusion": "The implementation may correctly update resources during the expected flow but does not provide sufficient evidence that authenticated users are restricted to modifying resources they are authorized to access."
+    }
+}
