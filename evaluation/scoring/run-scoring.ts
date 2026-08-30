@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import {
     scoreCompetencies,
     scoreCriticalFinding,
+    scoreTraceability,
     type ScoreSummary
 } from "./score-result.js";
 
@@ -62,16 +63,24 @@ interface BaselineResult {
 
 interface MidPathResult {
     workflow: {
+        evidenceAnalysis: {
+            evidence: Array<{
+                id: string;
+            }>;
+        };
+
         verification: {
             assessments: Array<{
                 competency: string;
                 level: number;
+                evidenceIds?: string[];
             }>;
 
             criticalFindings: Array<{
                 competency: string;
                 severity: string;
                 summary: string;
+                evidenceIds?: string[];
             }>;
         };
     };
@@ -147,6 +156,37 @@ async function main(): Promise<void> {
             midpath.workflow.verification.criticalFindings
         );
 
+    const validEvidenceIds =
+        new Set(
+            midpath.workflow.evidenceAnalysis.evidence.map(
+                (evidence) => evidence.id
+            )
+        );
+
+    const midpathAssessmentTraceability =
+        scoreTraceability(
+            midpath.workflow.verification.assessments.map(
+                (assessment) => ({
+                    id: assessment.competency,
+                    evidenceReferences:
+                        assessment.evidenceIds ?? []
+                })
+            ),
+            validEvidenceIds
+        );
+
+    const midpathCriticalFindingTraceability =
+        scoreTraceability(
+            midpath.workflow.verification.criticalFindings.map(
+                (finding, index) => ({
+                    id: `${finding.competency}-${index}`,
+                    evidenceReferences:
+                        finding.evidenceIds ?? []
+                })
+            ),
+            validEvidenceIds
+        );
+
     printSummary(
         "Baseline",
         baselineSummary
@@ -162,10 +202,23 @@ async function main(): Promise<void> {
         baselineCriticalFinding
     );
 
+
     printCriticalFinding(
         "MidPath",
         midpathCriticalFinding
     );
+
+    printTraceability(
+        "MidPath Assessment Traceability",
+        midpathAssessmentTraceability
+    );
+
+    printTraceability(
+        "MidPath Critical Finding Traceability",
+        midpathCriticalFindingTraceability
+    );
+
+
 }
 
 function toScoreRecord(
@@ -245,6 +298,25 @@ function printCriticalFinding(
 
     console.log(
         `Critical finding detected: ${result.detected}`
+    );
+}
+
+function printTraceability(
+    label: string,
+    result: {
+        totalItems: number;
+        traceableItems: number;
+        coverage: number;
+    }
+): void {
+    console.log(`\n${label}`);
+
+    console.log(
+        `Traceable items: ${result.traceableItems}/${result.totalItems}`
+    );
+
+    console.log(
+        `Coverage: ${(result.coverage * 100).toFixed(1)}%`
     );
 }
 

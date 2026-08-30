@@ -33,6 +33,17 @@ export interface CriticalFindingScore {
     detected: boolean;
 }
 
+export interface TraceabilityItem {
+    id: string;
+    evidenceReferences: string[];
+}
+
+export interface TraceabilityScore {
+    totalItems: number;
+    traceableItems: number;
+    coverage: number;
+}
+
 export function scoreCompetencies(
     expected: Record<string, number>,
     actual: Record<string, number>
@@ -131,5 +142,35 @@ export function scoreCriticalFinding(
         competencyDetected: true,
         severityMatched,
         detected: severityMatched
+    };
+}
+export function scoreTraceability(
+    items: TraceabilityItem[],
+    validEvidenceIds?: Set<string>
+): TraceabilityScore {
+    const traceableItems = items.filter(
+        (item) => {
+            if (item.evidenceReferences.length === 0) {
+                return false;
+            }
+
+            if (!validEvidenceIds) {
+                return true;
+            }
+
+            return item.evidenceReferences.some(
+                (reference) =>
+                    validEvidenceIds.has(reference)
+            );
+        }
+    ).length;
+
+    return {
+        totalItems: items.length,
+        traceableItems,
+        coverage:
+            items.length === 0
+                ? 0
+                : traceableItems / items.length
     };
 }

@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
     scoreCompetencies,
-    scoreCriticalFinding
+    scoreCriticalFinding,
+    scoreTraceability
 } from "./score-result.js";
 
 describe("scoreCompetencies", () => {
@@ -100,8 +101,6 @@ describe("scoreCompetencies", () => {
 });
 
 
-// ↓ COLE A PARTIR DAQUI, FORA DO DESCRIBE ANTERIOR
-
 describe("scoreCriticalFinding", () => {
     it("detects the expected critical finding when competency and severity match", () => {
         const result = scoreCriticalFinding(
@@ -170,4 +169,88 @@ describe("scoreCriticalFinding", () => {
         expect(result.severityMatched).toBe(false);
         expect(result.detected).toBe(false);
     });
+});
+
+describe("scoreTraceability", () => {
+    it("calculates traceability coverage", () => {
+        const result = scoreTraceability([
+            {
+                id: "A1",
+                evidenceReferences: ["E1"]
+            },
+            {
+                id: "A2",
+                evidenceReferences: ["E2"]
+            },
+            {
+                id: "A3",
+                evidenceReferences: []
+            }
+        ]);
+
+        expect(result.totalItems).toBe(3);
+        expect(result.traceableItems).toBe(2);
+        expect(result.coverage).toBeCloseTo(2 / 3);
+    });
+
+    it("returns zero coverage when no items are traceable", () => {
+        const result = scoreTraceability([
+            {
+                id: "A1",
+                evidenceReferences: []
+            },
+            {
+                id: "A2",
+                evidenceReferences: []
+            }
+        ]);
+
+        expect(result.totalItems).toBe(2);
+        expect(result.traceableItems).toBe(0);
+        expect(result.coverage).toBe(0);
+    });
+
+    it("returns zero coverage for an empty set", () => {
+        const result = scoreTraceability([]);
+
+        expect(result.totalItems).toBe(0);
+        expect(result.traceableItems).toBe(0);
+        expect(result.coverage).toBe(0);
+    });
+});
+
+it("counts only references that exist in the valid evidence set", () => {
+    const result = scoreTraceability(
+        [
+            {
+                id: "A1",
+                evidenceReferences: ["E1"]
+            },
+            {
+                id: "A2",
+                evidenceReferences: ["E99"]
+            }
+        ],
+        new Set(["E1", "E2"])
+    );
+
+    expect(result.totalItems).toBe(2);
+    expect(result.traceableItems).toBe(1);
+    expect(result.coverage).toBe(0.5);
+});
+
+it("accepts an item when at least one evidence reference is valid", () => {
+    const result = scoreTraceability(
+        [
+            {
+                id: "A1",
+                evidenceReferences: ["E99", "E2"]
+            }
+        ],
+        new Set(["E1", "E2"])
+    );
+
+    expect(result.totalItems).toBe(1);
+    expect(result.traceableItems).toBe(1);
+    expect(result.coverage).toBe(1);
 });
