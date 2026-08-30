@@ -124,3 +124,33 @@ flowchart LR
        B -. "Evidence IDs" .-> D
     D -. "Evidence References" .-> F
 ```
+### Why an Agentic Workflow?
+
+A single LLM call could read the artifacts, assign competency levels, and produce a final explanation.
+
+That would be simpler.
+
+It would also collapse several fundamentally different reasoning tasks into one opaque operation.
+
+MidPath instead decomposes the evaluation because each stage answers a different question:
+
+| Stage | Primary Question | Responsibility |
+|---|---|---|
+| **Evidence Analyst** | What can actually be observed in the artifacts? | Extract concrete, referenceable engineering evidence without assigning competency levels. |
+| **Competency Mapper** | What competency level is supported by that evidence? | Evaluate the extracted evidence against an explicit competency rubric. |
+| **Verification Agent** | Are the conclusions actually justified by the available evidence? | Inspect assessments and evidence references, surface critical gaps, and preserve traceability. |
+
+This separation creates explicit intermediate state between reasoning stages.
+
+Rather than allowing one model response to simultaneously decide **what happened**, **what it means**, and **whether its own conclusion is justified**, MidPath makes those decisions independently inspectable.
+
+The agentic decomposition provides four architectural properties:
+
+1. **Separation of concerns** — evidence extraction, competency inference, and verification have different responsibilities.
+2. **Traceability** — downstream conclusions can reference stable Evidence IDs rather than relying only on natural-language rationale.
+3. **Inspectability** — intermediate outputs can be examined independently when an evaluation is unexpected or incorrect.
+4. **Extensibility** — individual stages can evolve, be replaced, or be evaluated independently without redesigning the entire workflow.
+
+The purpose of the multi-stage architecture is therefore not to maximize the number of agents.
+
+It is to introduce **reasoning boundaries where engineering judgment benefits from explicit evidence and independent verification**.
