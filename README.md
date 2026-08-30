@@ -855,3 +855,191 @@ A workflow that succeeds only on the idempotency example could simply be respond
 Using independent failure classes provides a stronger test of whether the evaluation workflow consistently applies the underlying principle:
 
 > **Observed behavior should not be promoted into a stronger engineering guarantee without supporting evidence.**
+
+---
+
+## Baseline Evaluator
+
+The benchmark includes a deliberately simple **Baseline Evaluator** used as the experimental control for the MidPath workflow.
+
+The baseline is not agentic.
+
+It performs a direct model evaluation using the benchmark task, rubric, and submitted engineering artifacts in a single inference step.
+
+Conceptually:
+
+```text
+Task
+  +
+Rubric
+  +
+Engineering Artifacts
+  ↓
+Single Model Evaluation
+  ↓
+Competency Assessments
+  +
+Critical Findings
+```
+
+This provides a reference point for evaluating what changes when the same engineering assessment problem is processed through MidPath's structured evidence-driven workflow.
+
+### Baseline Input
+
+For each benchmark case, the Baseline Evaluator receives:
+
+```text
+Task
+Rubric
+Implementation Artifact
+Test Artifact
+```
+
+Unlike the MidPath workflow, the baseline has direct access to the original engineering artifacts during its assessment.
+
+It is therefore able to inspect the implementation and tests directly.
+
+However, it does not construct an intermediate evidence representation before assigning competency levels.
+
+### Single-Step Evaluation
+
+The baseline performs the engineering assessment in one model interaction.
+
+Its reasoning path is conceptually:
+
+```text
+Engineering Artifacts
+        ↓
+Direct Model Reasoning
+        ↓
+Competency Assessment
+```
+
+MidPath instead introduces explicit intermediate boundaries:
+
+```text
+Engineering Artifacts
+        ↓
+Evidence Analyst
+        ↓
+Validated Evidence
+        ↓
+Competency Mapper
+        ↓
+Evidence-Grounded Assessment
+        ↓
+Verification Agent
+        ↓
+Verified Assessment
+```
+
+The comparison therefore evaluates two different assessment architectures:
+
+| Baseline | MidPath |
+|---|---|
+| Single inference step | Multi-stage agentic workflow |
+| Direct artifact access | Evidence representation between stages |
+| No explicit Evidence ID chain | Evidence-linked conclusions |
+| Assessment produced directly | Assessment independently verified |
+| Critical findings produced directly | Critical findings verified against structured evidence |
+
+The purpose of the comparison is not to assume that a multi-agent workflow must produce higher competency-score accuracy.
+
+Instead, the experiment measures whether introducing explicit evidence and verification boundaries changes the **accuracy, engineering-risk detection, and auditability** of the resulting assessment.
+
+### Output
+
+The baseline produces structured JSON containing:
+
+```ts
+{
+  case_id: string;
+
+  competency_assessments: Array<{
+    competency: string;
+    level: number;
+    justification: string;
+    evidence: Array<{
+      artifact: string;
+      observation: string;
+    }>;
+    missing_evidence: string[];
+  }>;
+
+  critical_findings: Array<{
+    severity: string;
+    competency: string;
+    summary: string;
+    evidence: Array<{
+      artifact: string;
+      observation: string;
+    }>;
+  }>;
+}
+```
+
+The output intentionally contains similar assessment concepts to the MidPath result so that both systems can be compared against the same gold standard.
+
+The internal reasoning architecture, however, remains different.
+
+### No Gold Standard Access
+
+The Baseline Evaluator does **not** receive the benchmark gold standard during inference.
+
+The experimental separation is:
+
+```text
+Task + Rubric + Artifacts
+          ↓
+   Baseline Evaluator
+          ↓
+    Baseline Result
+
+----------------------------
+
+Gold Standard
+      +
+Baseline Result
+      ↓
+Offline Scoring
+```
+
+This is the same benchmark isolation principle used for MidPath.
+
+Neither evaluation path is allowed to use the expected benchmark answer to construct its assessment.
+
+### Frozen Experimental Outputs
+
+Model inference is probabilistic.
+
+Repeated executions of the same benchmark can therefore produce different competency levels, justifications, or critical findings.
+
+For that reason, completed benchmark outputs are treated as **frozen experimental observations**.
+
+Once a benchmark execution has been accepted as the recorded run, its result is stored under:
+
+```text
+evaluation/results/baseline/
+```
+
+and is not repeatedly regenerated until a more favorable result appears.
+
+This prevents post-hoc selection from silently turning model stochasticity into benchmark optimization.
+
+The same principle is applied to completed MidPath results.
+
+### Why the Baseline Matters
+
+Without a baseline, it would be difficult to distinguish the contribution of the MidPath architecture from the underlying capability of the language model itself.
+
+A capable model may already identify some engineering risks directly from source artifacts.
+
+The relevant experimental question is therefore not:
+
+> “Can an LLM identify this engineering problem?”
+
+It is:
+
+> “What does an explicit evidence-driven and independently verified workflow add to direct model evaluation?”
+
+The benchmark evaluates that question using the same cases, competency rubrics, gold standards, and offline scoring methodology for both evaluation paths.
