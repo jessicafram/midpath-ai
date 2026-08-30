@@ -1,0 +1,53 @@
+{
+    "case_id": "case-002-transaction-consistency",
+    "case_version": "1.0.0",
+    "rubric_version": "1.0.0",
+    "difficulty": "challenging",
+    "competency_assessments": [
+        {
+            "competency": "REST_API",
+            "expected_level": 2,
+            "rationale": "The service demonstrates a clear order creation workflow and basic input validation, but the artifacts do not demonstrate production-grade guarantees across all edge cases."
+        },
+        {
+            "competency": "PERSISTENCE",
+            "expected_level": 1,
+            "rationale": "The workflow performs multiple related persistence operations independently, without demonstrated atomic coordination or rollback across the complete operation."
+        },
+        {
+            "competency": "TESTING",
+            "expected_level": 1,
+            "rationale": "The tests demonstrate normal successful behavior but do not provide sufficient evidence for partial failures, rollback, or consistency when one repository operation fails."
+        },
+        {
+            "competency": "ERROR_HANDLING",
+            "expected_level": 1,
+            "rationale": "Repository failures may propagate, but the artifacts do not demonstrate recovery or compensation for state already persisted before a later operation fails."
+        },
+        {
+            "competency": "TRANSACTION_RELIABILITY",
+            "expected_level": 1,
+            "rationale": "The related writes are not demonstrated to execute within a shared transaction, creating a realistic risk of partially committed state."
+        }
+    ],
+    "critical_finding": {
+        "id": "PARTIAL_WRITE_INCONSISTENCY",
+        "severity": "high",
+        "competency": "TRANSACTION_RELIABILITY",
+        "summary": "The order workflow is not demonstrated to be atomic across its related persistence operations.",
+        "evidence": [
+            {
+                "artifact": "artifacts/order-service.ts",
+                "observation": "The expected workflow performs order creation, inventory modification, and payment-attempt persistence as separate operations without a demonstrated shared transaction or rollback mechanism."
+            }
+        ],
+        "failure_scenario": [
+            "The order is created successfully.",
+            "Inventory is decreased successfully.",
+            "Recording the payment attempt fails.",
+            "The operation exits with an error after earlier state changes have already succeeded.",
+            "The system can therefore retain an order and modified inventory without the corresponding payment-attempt record."
+        ],
+        "expected_diagnostic_conclusion": "The implementation may behave correctly on the happy path but does not provide sufficient evidence that the multi-write workflow preserves consistency under partial failure."
+    }
+}

@@ -15,7 +15,9 @@ import {
     VerificationAgent
 } from "../../agents/verification/verification-agent.js";
 
-const CASE_ID = "case-001-idempotency";
+const CASE_ID =
+    process.env.CASE_ID ??
+    "case-001-idempotency";
 const MODEL = "gemini-3.6-flash";
 
 const projectRoot = resolve(process.cwd());

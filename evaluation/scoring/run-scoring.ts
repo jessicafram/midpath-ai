@@ -8,7 +8,9 @@ import {
     type ScoreSummary
 } from "./score-result.js";
 
-const CASE_ID = "case-001-idempotency";
+const CASE_ID =
+    process.env.CASE_ID ??
+    "case-001-idempotency";
 
 const projectRoot = resolve(process.cwd());
 

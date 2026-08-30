@@ -3,7 +3,9 @@ import path from "node:path";
 
 import { GoogleGenAI } from "@google/genai";
 
-const CASE_ID = "case-001-idempotency";
+const CASE_ID =
+    process.env.CASE_ID ??
+    "case-001-idempotency";
 
 const ROOT_DIR = process.cwd();
 

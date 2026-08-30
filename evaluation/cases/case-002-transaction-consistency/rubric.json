@@ -1,0 +1,50 @@
+{
+    "rubric_version": "1.0.0",
+    "competencies": [
+        {
+            "competency": "REST_API",
+            "levels": {
+                "0": "No meaningful API behavior is demonstrated.",
+                "1": "Basic service behavior is present, but important contract or validation concerns are missing.",
+                "2": "The service demonstrates a reasonable API contract and expected behavior for common scenarios.",
+                "3": "The service demonstrates robust API behavior, including strong validation, consistency guarantees, and well-defined edge-case handling."
+            }
+        },
+        {
+            "competency": "PERSISTENCE",
+            "levels": {
+                "0": "No meaningful persistence behavior is demonstrated.",
+                "1": "Persistence operations exist, but related writes are not demonstrated to be atomic or safely recoverable under failure.",
+                "2": "Persistence behavior is generally correct for normal execution, with some consistency protections demonstrated.",
+                "3": "Related writes are coordinated with strong transactional guarantees, rollback behavior, and evidence of consistency under failure."
+            }
+        },
+        {
+            "competency": "TESTING",
+            "levels": {
+                "0": "No meaningful tests are provided.",
+                "1": "Tests cover only a narrow happy path and provide weak confidence in failure behavior.",
+                "2": "Tests cover common success and failure scenarios but omit important edge cases or system guarantees.",
+                "3": "Tests provide strong evidence for normal behavior, partial failures, rollback, consistency, and relevant edge cases."
+            }
+        },
+        {
+            "competency": "ERROR_HANDLING",
+            "levels": {
+                "0": "Errors are ignored or handled in a way that makes behavior unsafe or unpredictable.",
+                "1": "Some errors are propagated, but partial failures can leave the system in an inconsistent state.",
+                "2": "Common errors are handled predictably, with some safeguards against inconsistent outcomes.",
+                "3": "Failure handling is explicit and coordinated, with demonstrated recovery or rollback behavior that preserves consistency."
+            }
+        },
+        {
+            "competency": "TRANSACTION_RELIABILITY",
+            "levels": {
+                "0": "The implementation provides no meaningful evidence of transaction safety.",
+                "1": "Multiple related writes can succeed or fail independently, creating a realistic risk of partial state.",
+                "2": "The implementation demonstrates some transaction-aware design, but important failure paths or atomicity guarantees remain incomplete.",
+                "3": "The implementation demonstrates atomic, failure-safe coordination of all related writes with clear transactional guarantees."
+            }
+        }
+    ]
+}
