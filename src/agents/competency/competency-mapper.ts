@@ -68,6 +68,48 @@ Return only valid JSON using this structure:
 }
 `;
 
+async function withRetry<T>(
+    operation: () => Promise<T>,
+    maxAttempts = 3
+): Promise<T> {
+    let lastError: unknown;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+            return await operation();
+        } catch (error) {
+            lastError = error;
+
+            const message =
+                error instanceof Error
+                    ? error.message
+                    : String(error);
+
+            const retryable =
+                message.includes('"code":503') ||
+                message.includes('"code":429') ||
+                message.includes("UNAVAILABLE") ||
+                message.includes("RESOURCE_EXHAUSTED");
+
+            if (!retryable || attempt === maxAttempts) {
+                throw error;
+            }
+
+            const delayMs = attempt * 2000;
+
+            console.warn(
+                `[Competency Mapper] Transient model error. Retry ${attempt}/${maxAttempts} in ${delayMs}ms...`
+            );
+
+            await new Promise((resolve) =>
+                setTimeout(resolve, delayMs)
+            );
+        }
+    }
+
+    throw lastError;
+}
+
 export class CompetencyMapper {
     constructor(
         private readonly ai: GoogleGenAI,
@@ -88,14 +130,16 @@ EVIDENCE ANALYSIS:
 ${JSON.stringify(input.evidenceAnalysis, null, 2)}
 `;
 
-        const response = await this.ai.models.generateContent({
-            model: this.model,
-            contents,
-            config: {
-                systemInstruction: SYSTEM_INSTRUCTION,
-                responseMimeType: "application/json"
-            }
-        });
+        const response = await withRetry(() =>
+            this.ai.models.generateContent({
+                model: this.model,
+                contents,
+                config: {
+                    systemInstruction: SYSTEM_INSTRUCTION,
+                    responseMimeType: "application/json"
+                }
+            })
+        );
 
         const rawText = response.text;
 
@@ -157,7 +201,9 @@ function validateCompetencyMapping(
 
     const expectedCompetencies = new Set(
         rubric.competencies.map(
-            (competency) => competency.code
+            (competency) =>
+                competency.code ??
+                competency.competency
         )
     );
 
@@ -235,7 +281,8 @@ function validateCompetencyMapping(
 
 interface ParsedRubric {
     competencies: Array<{
-        code: string;
+        code?: string;
+        competency?: string;
     }>;
 }
 

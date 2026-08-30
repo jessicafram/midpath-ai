@@ -194,7 +194,9 @@ function validateVerificationResult(
 
     const expectedCompetencies = new Set(
         rubric.competencies.map(
-            (competency) => competency.code
+            (competency) =>
+                competency.code ??
+                competency.competency
         )
     );
 
@@ -325,7 +327,8 @@ function validateEvidenceIds(
 
 interface ParsedRubric {
     competencies: Array<{
-        code: string;
+        code?: string;
+        competency?: string;
     }>;
 }
 

@@ -18,6 +18,12 @@ import {
 const CASE_ID =
     process.env.CASE_ID ??
     "case-001-idempotency";
+
+const ARTIFACT_NAME =
+    CASE_ID === "case-002-transaction-consistency"
+        ? "order-service"
+        : "payment-service";
+
 const MODEL = "gemini-3.6-flash";
 
 const projectRoot = resolve(process.cwd());
@@ -68,14 +74,14 @@ async function main(): Promise<void> {
         readFile(
             resolve(
                 artifactDirectory,
-                "payment-service.ts"
+                `${ARTIFACT_NAME}.ts`
             ),
             "utf8"
         ),
         readFile(
             resolve(
                 artifactDirectory,
-                "payment-service.test.ts"
+                `${ARTIFACT_NAME}.test.ts`
             ),
             "utf8"
         )
@@ -83,11 +89,11 @@ async function main(): Promise<void> {
 
     const artifacts = [
         {
-            path: "artifacts/payment-service.ts",
+            path: `artifacts/${ARTIFACT_NAME}.ts`,
             content: paymentService
         },
         {
-            path: "artifacts/payment-service.test.ts",
+            path: `artifacts/${ARTIFACT_NAME}.test.ts`,
             content: paymentServiceTest
         }
     ];

@@ -7,6 +7,11 @@ const CASE_ID =
     process.env.CASE_ID ??
     "case-001-idempotency";
 
+const ARTIFACT_NAME =
+    CASE_ID === "case-002-transaction-consistency"
+        ? "order-service"
+        : "payment-service";
+
 const ROOT_DIR = process.cwd();
 
 const CASE_DIR = path.join(
@@ -63,14 +68,14 @@ async function main(): Promise<void> {
             path.join(
                 CASE_DIR,
                 "artifacts",
-                "payment-service.ts"
+                `${ARTIFACT_NAME}.ts`
             )
         ),
         loadText(
             path.join(
                 CASE_DIR,
                 "artifacts",
-                "payment-service.test.ts"
+                `${ARTIFACT_NAME}.test.ts`
             )
         )
     ]);
