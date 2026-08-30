@@ -154,3 +154,103 @@ The agentic decomposition provides four architectural properties:
 The purpose of the multi-stage architecture is therefore not to maximize the number of agents.
 
 It is to introduce **reasoning boundaries where engineering judgment benefits from explicit evidence and independent verification**.
+
+### Agent 1 — Evidence Analyst
+
+The **Evidence Analyst** is the observation boundary of the MidPath workflow.
+
+Its responsibility is deliberately narrow:
+
+> **Extract what the submitted engineering artifacts actually support — and nothing more.**
+
+It receives the engineering task together with the submitted artifacts and converts them into atomic evidence records.
+
+#### Input
+
+```ts
+{
+  caseId: string;
+  task: string;
+  artifacts: Array<{
+    path: string;
+    content: string;
+  }>;
+}
+```
+
+The artifacts are treated as the source of truth for the analysis.
+
+The agent is explicitly instructed not to assume infrastructure, database constraints, transaction semantics, deployment configuration, or runtime guarantees that are not visible in those artifacts.
+
+#### Output
+
+The Evidence Analyst produces a structured `EvidenceAnalysis`:
+
+```ts
+{
+  caseId: string;
+  evidence: Array<{
+    id: string;
+    artifact: string;
+    observation: string;
+    evidenceType:
+      | "implementation"
+      | "test"
+      | "contract"
+      | "missing";
+    confidence: number;
+  }>;
+}
+```
+
+Each evidence item is intended to represent one focused engineering observation.
+
+Evidence can describe:
+
+- implementation behavior;
+- test coverage;
+- explicit contracts;
+- or an important guarantee that is not demonstrated by the available artifacts.
+
+The `artifact` field preserves provenance, while the Evidence ID provides a stable reference that downstream stages can use when producing competency assessments and verification findings.
+
+#### Reasoning Boundary
+
+The Evidence Analyst is explicitly prohibited from:
+
+- assigning competency scores;
+- classifying proficiency;
+- recommending learning resources;
+- inferring guarantees that are not demonstrated;
+- treating passing tests as proof of behavior that the tests never exercised.
+
+This boundary is important.
+
+The Evidence Analyst answers:
+
+> **“What can we support from the artifacts?”**
+
+It does **not** answer:
+
+> **“What competency level does this imply?”**
+
+That decision belongs to the next stage.
+
+#### Runtime Validation
+
+MidPath does not accept the model response blindly.
+
+The Evidence Analyst response is parsed and validated before it can enter the next stage of the workflow.
+
+The implementation rejects responses when:
+
+- the output is not valid JSON;
+- the returned `caseId` does not match the evaluated case;
+- the `evidence` collection is missing;
+- required evidence fields have invalid types;
+- `confidence` is outside the range `0..1`;
+- or an unsupported evidence type is returned.
+
+This creates a structured boundary between probabilistic model inference and deterministic application logic.
+
+The result is a typed, validated evidence representation that downstream agents can inspect and reference.
