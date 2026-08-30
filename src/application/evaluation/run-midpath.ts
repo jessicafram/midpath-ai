@@ -22,7 +22,9 @@ const CASE_ID =
 const ARTIFACT_NAME =
     CASE_ID === "case-002-transaction-consistency"
         ? "order-service"
-        : "payment-service";
+        : CASE_ID === "case-003-authorization-boundary"
+            ? "profile-service"
+            : "payment-service";
 
 const MODEL = "gemini-3.6-flash";
 

@@ -10,7 +10,9 @@ const CASE_ID =
 const ARTIFACT_NAME =
     CASE_ID === "case-002-transaction-consistency"
         ? "order-service"
-        : "payment-service";
+        : CASE_ID === "case-003-authorization-boundary"
+            ? "profile-service"
+            : "payment-service";
 
 const ROOT_DIR = process.cwd();
 
@@ -40,6 +42,55 @@ const RESULT_PATH = path.join(
     RESULT_DIR,
     `${CASE_ID}.json`
 );
+
+async function withRetry<T>(
+    operation: () => Promise<T>,
+    maxAttempts = 3
+): Promise<T> {
+    let lastError: unknown;
+
+    for (
+        let attempt = 1;
+        attempt <= maxAttempts;
+        attempt++
+    ) {
+        try {
+            return await operation();
+        } catch (error) {
+            lastError = error;
+
+            const message =
+                error instanceof Error
+                    ? error.message
+                    : String(error);
+
+            const retryable =
+                message.includes('"code":503') ||
+                message.includes('"code":429') ||
+                message.includes("UNAVAILABLE") ||
+                message.includes("RESOURCE_EXHAUSTED");
+
+            if (
+                !retryable ||
+                attempt === maxAttempts
+            ) {
+                throw error;
+            }
+
+            const delayMs = attempt * 2000;
+
+            console.warn(
+                `[Baseline] Transient model error. Retry ${attempt}/${maxAttempts} in ${delayMs}ms...`
+            );
+
+            await new Promise((resolve) =>
+                setTimeout(resolve, delayMs)
+            );
+        }
+    }
+
+    throw lastError;
+}
 
 async function loadText(filePath: string): Promise<string> {
     return readFile(filePath, "utf8");
@@ -94,21 +145,23 @@ ${task}
 RUBRIC:
 ${rubric}
 
-ARTIFACT: artifacts/payment-service.ts
+ARTIFACT: artifacts/${ARTIFACT_NAME}.ts
 ${paymentService}
 
-ARTIFACT: artifacts/payment-service.test.ts
+ARTIFACT: artifacts/${ARTIFACT_NAME}.test.ts
 ${paymentServiceTest}
 `;
 
-    const response = await ai.models.generateContent({
-        model: "gemini-3.6-flash",
-        contents: evaluationInput,
-        config: {
-            systemInstruction: systemPrompt,
-            responseMimeType: "application/json"
-        }
-    });
+    const response = await withRetry(() =>
+        ai.models.generateContent({
+            model: "gemini-3.6-flash",
+            contents: evaluationInput,
+            config: {
+                systemInstruction: systemPrompt,
+                responseMimeType: "application/json"
+            }
+        })
+    );
 
     const rawText = response.text;
 

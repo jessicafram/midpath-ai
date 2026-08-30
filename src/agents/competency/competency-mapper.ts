@@ -85,11 +85,18 @@ async function withRetry<T>(
                     ? error.message
                     : String(error);
 
+            const quotaExhausted =
+                message.includes("Quota exceeded") ||
+                message.includes(
+                    "generate_content_free_tier_requests"
+                );
+
             const retryable =
-                message.includes('"code":503') ||
-                message.includes('"code":429') ||
-                message.includes("UNAVAILABLE") ||
-                message.includes("RESOURCE_EXHAUSTED");
+                !quotaExhausted &&
+                (
+                    message.includes('"code":503') ||
+                    message.includes("UNAVAILABLE")
+                );
 
             if (!retryable || attempt === maxAttempts) {
                 throw error;
