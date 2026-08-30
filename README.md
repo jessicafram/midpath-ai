@@ -583,3 +583,136 @@ The Verification Agent closes the MidPath reasoning loop by testing whether the 
 It does not guarantee that the model's reasoning is objectively correct.
 
 It does make the reasoning **inspectable, constrained, and traceable**.
+
+---
+
+## Experimental Methodology
+
+MidPath AI is evaluated using explicit benchmark cases with independently defined reference expectations.
+
+The purpose of the benchmark is not merely to determine whether an evaluator produces plausible prose.
+
+It is to measure whether the evaluator can recover engineering conclusions that are supported by the submitted artifacts, identify important engineering risks, and preserve a traceable evidence chain.
+
+### Gold Standard
+
+Each benchmark case contains a structured **gold standard** representing the expected engineering assessment for that case.
+
+The gold standard is authored independently of the evaluator output and is not supplied to the Baseline evaluator or to any MidPath agent during inference.
+
+It is used only after an evaluation has completed, when the evaluation harness compares the produced result against the reference expectations.
+
+The experimental separation is therefore:
+
+```text
+Task + Artifacts + Rubric
+          ↓
+      Evaluator
+          ↓
+    Produced Result
+
+-------------------------
+
+    Gold Standard
+          +
+    Produced Result
+          ↓
+     Offline Scoring
+```
+
+This prevents the evaluation workflow from using the expected benchmark answer as evidence for its own conclusions.
+
+#### Gold Standard Structure
+
+A gold standard contains more than expected numeric levels.
+
+For each competency, it records:
+
+```ts
+{
+  competency: string;
+  expected_level: number;
+  label: string;
+  supported_evidence: Array<{
+    artifact: string;
+    observation: string;
+  }>;
+  missing_evidence: string[];
+  justification: string;
+}
+```
+
+This allows the reference assessment to represent both sides of an engineering judgment:
+
+- what the submitted artifacts actually demonstrate;
+- and what evidence is still absent for a stronger conclusion.
+
+The benchmark therefore does not treat competency assessment as a simple classification problem detached from engineering reasoning.
+
+#### Critical Finding Reference
+
+Each case can also define a reference critical finding containing:
+
+```ts
+{
+  id: string;
+  severity: string;
+  competency: string;
+  summary: string;
+  evidence: Array<{
+    artifact: string;
+    observation: string;
+  }>;
+  failure_scenario: string[];
+  expected_diagnostic_conclusion: string;
+}
+```
+
+The critical finding represents the engineering weakness that the case is specifically designed to test.
+
+It includes not only the expected category and severity, but also the artifact evidence and failure scenario that justify the conclusion.
+
+#### Example — Idempotency Reliability
+
+In the idempotency benchmark, the submitted implementation demonstrates successful **sequential duplicate handling**.
+
+The gold standard intentionally does not treat that behavior as proof of concurrency-safe idempotency.
+
+The reference assessment recognizes evidence that:
+
+- an existing idempotency record is reused;
+- a sequential duplicate request returns the original payment;
+- and the common retry path is covered by tests.
+
+But it also records missing evidence for:
+
+- atomic idempotency claims;
+- concurrency-safe duplicate protection;
+- database-level uniqueness;
+- and concurrent duplicate-request testing.
+
+The critical reference finding is therefore:
+
+> **The implementation demonstrates sequential idempotency behavior but does not provide sufficient evidence of concurrency-safe idempotency.**
+
+The associated failure scenario makes the hidden reliability gap explicit:
+
+```text
+Request A checks the key → no record
+Request B checks the same key → no record
+
+Request A creates a payment
+Request B creates another payment
+
+Only afterward are idempotency records persisted
+```
+
+The benchmark therefore evaluates whether an assessment can distinguish **tested behavior** from the stronger engineering guarantee that the tests do not establish.
+
+#### Predefined Before Evaluation
+
+Gold standards are defined before evaluator execution and completed benchmark outputs are treated as frozen experimental results rather than repeatedly regenerated until a favorable answer appears.
+
+This reduces post-hoc tuning pressure and keeps the benchmark reference independent from model output.
+
+The gold standard is therefore an **evaluation instrument**, not an input to the agentic reasoning process.
