@@ -254,3 +254,130 @@ The implementation rejects responses when:
 This creates a structured boundary between probabilistic model inference and deterministic application logic.
 
 The result is a typed, validated evidence representation that downstream agents can inspect and reference.
+
+### Agent 2 — Competency Mapper
+
+The **Competency Mapper** is the inference boundary of the MidPath workflow.
+
+Its responsibility is to determine what competency level is supported by the evidence produced in the previous stage.
+
+A critical architectural constraint is that the Competency Mapper **does not receive the original engineering artifacts**.
+
+It receives only:
+
+1. the explicit competency rubric; and
+2. the validated `EvidenceAnalysis`.
+
+This prevents the mapping stage from independently reinterpreting the source artifacts and bypassing the evidence representation established by the Evidence Analyst.
+
+#### Input
+
+```ts
+{
+  caseId: string;
+  rubric: string;
+  evidenceAnalysis: EvidenceAnalysis;
+}
+```
+
+The rubric defines the competencies that must be evaluated.
+
+The evidence analysis defines the observations that the mapper is allowed to use.
+
+The mapper is explicitly instructed to use only supplied evidence, avoid inventing implementation details or guarantees, and avoid creating competencies that are not present in the rubric.
+
+#### Output
+
+The Competency Mapper produces a structured `CompetencyMapping`:
+
+```ts
+{
+  caseId: string;
+  assessments: Array<{
+    competency: string;
+    level: number;
+    evidenceIds: string[];
+    missingEvidence: string[];
+    justification: string;
+  }>;
+}
+```
+
+A competency assessment therefore contains more than a level.
+
+It records:
+
+- the competency being evaluated;
+- the assigned level;
+- the Evidence IDs supporting that assessment;
+- evidence that would be required to justify a stronger conclusion;
+- and a grounded justification.
+
+This makes the assessment inspectable rather than reducing the evaluation to an isolated numeric score.
+
+#### Reasoning Boundary
+
+The Competency Mapper answers:
+
+> **“What competency level is supported by the available evidence?”**
+
+It does not answer:
+
+> **“What else might be true about the implementation?”**
+
+The agent is explicitly instructed not to invent tests, infrastructure, runtime behavior, implementation details, or engineering guarantees that are absent from the supplied evidence.
+
+It must also distinguish ordinary successful behavior from stronger reliability guarantees.
+
+For example, evidence that a sequential request succeeds cannot automatically establish concurrency safety, just as a successful happy path cannot automatically establish transactional recovery behavior.
+
+When the available evidence is insufficient to justify a stronger level, the mapper records the relevant gap in `missingEvidence`.
+
+#### Evidence Referential Integrity
+
+Evidence references produced by the model are validated against the actual Evidence IDs created by the upstream Evidence Analyst.
+
+For each assessment:
+
+```text
+Competency Assessment
+        ↓
+evidenceIds[]
+        ↓
+Validated against
+        ↓
+EvidenceAnalysis.evidence[].id
+```
+
+An assessment cannot successfully reference an Evidence ID that does not exist in the current evidence analysis.
+
+This creates a deterministic referential boundary around an otherwise probabilistic inference step.
+
+#### Rubric Conformance
+
+The application also validates the structure of the competency mapping.
+
+The implementation requires:
+
+- every competency defined by the rubric to be assessed exactly once;
+- no additional competencies;
+- no duplicate competency assessments;
+- integer competency levels within the supported `0..3` range;
+- structured `evidenceIds` and `missingEvidence` collections;
+- and a textual justification for each assessment.
+
+The rubric itself is parsed before the mapping can be accepted, and malformed rubric input is rejected.
+
+Together, these checks prevent structurally invalid model output from silently entering the next stage of the evaluation pipeline.
+
+#### Transient Failure Handling
+
+The Competency Mapper also distinguishes between transient provider failures and exhausted quota.
+
+Transient model errors such as `503 / UNAVAILABLE` are retried with bounded incremental delay.
+
+Quota exhaustion is treated as non-retryable, preventing repeated requests when immediate retry cannot resolve the failure.
+
+This behavior keeps infrastructure failure handling separate from engineering evaluation logic.
+
+The resulting `CompetencyMapping` is therefore a structured inference layer between validated engineering evidence and downstream verification.
