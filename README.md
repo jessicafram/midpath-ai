@@ -1,117 +1,104 @@
-# MidPath AI
 
-> **Evidence-driven engineering readiness assessment for the work that passing tests do not prove.**
 
-MidPath AI is an agentic evaluation system designed to assess software engineering competency from **concrete engineering evidence**, rather than self-reported skills, isolated coding exercises, or test outcomes alone.
 
-A passing test demonstrates that a specific scenario worked under the conditions that were exercised.
+MidPath AI
+Evidence-driven engineering readiness assessment for the work that
+passing tests do not prove.
 
-It does **not** automatically prove that the implementation provides the engineering guarantees expected in production — such as concurrency safety, transactional consistency, authorization boundaries, failure recovery, or reliable idempotency.
+MidPath AI is an agentic evaluation system that assesses software
+engineering competency from concrete engineering evidence rather
+than self-reported skills, isolated coding exercises, or test outcomes
+alone.
+
+A passing test proves that a tested scenario worked under the conditions
+exercised. It does not automatically prove stronger production
+guarantees such as concurrency safety, transactional consistency,
+authorization boundaries, failure recovery, or reliable idempotency.
 
 MidPath AI is designed to reason about that gap.
 
----
+Why MidPath?
+Software engineering assessment often collapses several different
+questions into one:
 
-## The Problem
+Did the implementation pass its tests?
 
-Software engineering competency is difficult to evaluate reliably.
+What behavior is actually demonstrated by the submitted artifacts?
 
-Traditional assessment approaches often rely on signals such as:
+What stronger engineering guarantees are supported?
 
-- self-reported experience;
-- technology checklists;
-- isolated coding exercises;
-- automated test results;
-- or a final implementation without explicit evidence of the reasoning and guarantees behind it.
+What competency level can reasonably be inferred?
 
-These signals are useful, but incomplete.
+Can the final judgment be traced back to concrete evidence?
 
-A developer may produce code that passes every available test while the implementation still contains an important engineering weakness that the test suite never exercised.
+MidPath separates those questions.
 
-For example:
+Passing tests are evidence of tested behavior. They are not, by
+themselves, proof of an engineering guarantee.
 
-- sequential requests may pass while concurrent requests violate idempotency;
-- multiple persistence operations may succeed on the happy path while partial failures leave inconsistent state;
-- an authenticated request may successfully update a resource while ownership authorization is never enforced.
+Example
+A payment service may correctly handle two sequential requests using
+the same idempotency key while still allowing duplicate payments under
+concurrency.
 
-In each case, the visible behavior can appear correct while an important production guarantee remains unsupported.
+Request A checks key → no record
+Request B checks key → no record
 
-This creates a fundamental distinction:
+Request A creates payment
+Request B creates payment
 
-> **Passing tests are evidence of tested behavior. They are not, by themselves, proof of an engineering guarantee.**
+Only afterward are idempotency records persisted
+The visible tests may remain green.
 
-MidPath AI makes that distinction explicit.
+The production guarantee may still be unsupported.
 
----
+That distinction is the central problem MidPath evaluates.
 
-## What MidPath AI Does
+What MidPath Does
+MidPath builds a structured chain from observable engineering
+artifacts to verified engineering judgment.
 
-MidPath AI analyzes engineering artifacts and builds a structured chain from **observable evidence** to **engineering judgment**.
-
+Engineering Artifact
+        ↓
+Evidence
+        ↓
+Competency Assessment
+        ↓
+Critical Finding
+        ↓
+Verification
 Instead of asking only:
 
-> *“Does this developer know idempotency?”*
+"Does this developer know idempotency?"
 
 MidPath asks:
 
-> *“What evidence in the engineering artifacts supports that conclusion, what guarantee does that evidence establish, and what remains unproven?”*
+"What evidence supports that conclusion, what guarantee does that
+evidence establish, and what remains unproven?"
 
-The system decomposes the evaluation into specialized stages that:
+The result is intended to be more than another AI-generated score.
 
-1. inspect engineering artifacts;
-2. extract concrete evidence;
-3. map that evidence to engineering competencies;
-4. identify important reliability or correctness gaps;
-5. verify whether the resulting conclusions are supported by the extracted evidence.
+It is a traceable engineering assessment.
 
-The output is therefore not intended to be just another AI-generated score.
+Core Principle
+No engineering conclusion without evidence.
 
-It is intended to be a **traceable engineering judgment**.
+MidPath deliberately separates:
 
----
+observation --- what the artifacts demonstrate;
 
-## Core Principle: Evidence Before Judgment
+inference --- what competency level that evidence supports;
 
-MidPath follows one central rule:
+verification --- whether the conclusion remains supportable and
+traceable.
 
-> **No engineering conclusion without evidence.**
+This separation prevents ordinary successful behavior from being
+silently promoted into stronger reliability claims.
 
-The evaluation chain is:
-
-**Engineering Artifact → Evidence → Competency Assessment → Critical Finding → Verification**
-
-Each stage has a distinct responsibility.
-
-Engineering artifacts provide the observable source material.
-
-Evidence records what can actually be supported by those artifacts.
-
-Competency assessments infer engineering capability from that evidence.
-
-Critical findings identify gaps between observed behavior and stronger engineering guarantees.
-
-Verification checks whether the conclusions remain connected to concrete evidence rather than unsupported model reasoning.
-
-This creates a separation between three questions that are often incorrectly collapsed into one:
-
-1. **What did the implementation demonstrably do?**
-2. **What engineering guarantees are actually supported by that evidence?**
-3. **What competency level can reasonably be inferred from those guarantees?**
-
-That separation is the foundation of MidPath AI.
-
----
-
-## System Architecture
-
-MidPath AI is structured as a multi-stage agentic evaluation pipeline.
-
-The architecture deliberately separates **observation**, **inference**, and **verification** rather than asking a single model invocation to inspect the artifacts and produce an unstructured final judgment.
-
-```mermaid
+System Architecture
 flowchart LR
     A["Engineering Artifacts"] --> B["Evidence Analyst"]
-    B --> C["Evidence Store"]
+    B --> C["Structured Evidence"]
     C --> D["Competency Mapper"]
     D --> E["Competency Assessments"]
     C --> F["Verification Agent"]
@@ -121,225 +108,114 @@ flowchart LR
     H["Evaluation Rubric"] --> D
     H --> F
 
-       B -. "Evidence IDs" .-> D
+    B -. "Evidence IDs" .-> D
     D -. "Evidence References" .-> F
-```
-### Why an Agentic Workflow?
+Why an Agentic Workflow?
+A single LLM call could inspect the artifacts, assign levels, and write
+an explanation.
 
-A single LLM call could read the artifacts, assign competency levels, and produce a final explanation.
+MidPath intentionally does not do that.
 
-That would be simpler.
+Stage Question Responsibility
 
-It would also collapse several fundamentally different reasoning tasks into one opaque operation.
+Evidence Analyst What can actually be Extract atomic,
+observed? referenceable evidence
+without scoring
+competency.
 
-MidPath instead decomposes the evaluation because each stage answers a different question:
+Competency Mapper What level is Map validated evidence
+supported? to an explicit rubric.
 
-| Stage | Primary Question | Responsibility |
-|---|---|---|
-| **Evidence Analyst** | What can actually be observed in the artifacts? | Extract concrete, referenceable engineering evidence without assigning competency levels. |
-| **Competency Mapper** | What competency level is supported by that evidence? | Evaluate the extracted evidence against an explicit competency rubric. |
-| **Verification Agent** | Are the conclusions actually justified by the available evidence? | Inspect assessments and evidence references, surface critical gaps, and preserve traceability. |
+The goal is not to maximize the number of agents. The goal is to create
+reasoning boundaries where engineering judgment benefits from explicit
+evidence and independent verification.
 
-This separation creates explicit intermediate state between reasoning stages.
+Agent 1 --- Evidence Analyst
+The Evidence Analyst is the observation boundary.
 
-Rather than allowing one model response to simultaneously decide **what happened**, **what it means**, and **whether its own conclusion is justified**, MidPath makes those decisions independently inspectable.
+It receives the engineering task and submitted artifacts and produces
+structured evidence records.
 
-The agentic decomposition provides four architectural properties:
-
-1. **Separation of concerns** — evidence extraction, competency inference, and verification have different responsibilities.
-2. **Traceability** — downstream conclusions can reference stable Evidence IDs rather than relying only on natural-language rationale.
-3. **Inspectability** — intermediate outputs can be examined independently when an evaluation is unexpected or incorrect.
-4. **Extensibility** — individual stages can evolve, be replaced, or be evaluated independently without redesigning the entire workflow.
-
-The purpose of the multi-stage architecture is therefore not to maximize the number of agents.
-
-It is to introduce **reasoning boundaries where engineering judgment benefits from explicit evidence and independent verification**.
-
-### Agent 1 — Evidence Analyst
-
-The **Evidence Analyst** is the observation boundary of the MidPath workflow.
-
-Its responsibility is deliberately narrow:
-
-> **Extract what the submitted engineering artifacts actually support — and nothing more.**
-
-It receives the engineering task together with the submitted artifacts and converts them into atomic evidence records.
-
-#### Input
-
-```ts
-{
-  caseId: string;
-  task: string;
-  artifacts: Array<{
-    path: string;
-    content: string;
-  }>;
+interface EvidenceItem {
+  id: string;
+  artifact: string;
+  observation: string;
+  evidenceType:
+    | "implementation"
+    | "test"
+    | "contract"
+    | "missing";
+  confidence: number;
 }
-```
+It is explicitly instructed not to:
 
-The artifacts are treated as the source of truth for the analysis.
+assign competency scores;
 
-The agent is explicitly instructed not to assume infrastructure, database constraints, transaction semantics, deployment configuration, or runtime guarantees that are not visible in those artifacts.
+classify proficiency;
 
-#### Output
+invent infrastructure or database guarantees;
 
-The Evidence Analyst produces a structured `EvidenceAnalysis`:
+assume transaction or deployment semantics;
 
-```ts
-{
-  caseId: string;
-  evidence: Array<{
-    id: string;
-    artifact: string;
-    observation: string;
-    evidenceType:
-      | "implementation"
-      | "test"
-      | "contract"
-      | "missing";
-    confidence: number;
-  }>;
-}
-```
+treat passing tests as proof of behavior never exercised.
 
-Each evidence item is intended to represent one focused engineering observation.
+Its question is:
 
-Evidence can describe:
+"What can we support from the artifacts?"
 
-- implementation behavior;
-- test coverage;
-- explicit contracts;
-- or an important guarantee that is not demonstrated by the available artifacts.
+Deterministic Validation
+Model output is not accepted blindly.
 
-The `artifact` field preserves provenance, while the Evidence ID provides a stable reference that downstream stages can use when producing competency assessments and verification findings.
+The application validates:
 
-#### Reasoning Boundary
+JSON structure;
 
-The Evidence Analyst is explicitly prohibited from:
+expected caseId;
 
-- assigning competency scores;
-- classifying proficiency;
-- recommending learning resources;
-- inferring guarantees that are not demonstrated;
-- treating passing tests as proof of behavior that the tests never exercised.
+required evidence fields;
 
-This boundary is important.
+supported evidence types;
 
-The Evidence Analyst answers:
+confidence in the 0..1 range.
 
-> **“What can we support from the artifacts?”**
+This creates a deterministic boundary around probabilistic inference.
 
-It does **not** answer:
+Agent 2 --- Competency Mapper
+The Competency Mapper is the inference boundary.
 
-> **“What competency level does this imply?”**
-
-That decision belongs to the next stage.
-
-#### Runtime Validation
-
-MidPath does not accept the model response blindly.
-
-The Evidence Analyst response is parsed and validated before it can enter the next stage of the workflow.
-
-The implementation rejects responses when:
-
-- the output is not valid JSON;
-- the returned `caseId` does not match the evaluated case;
-- the `evidence` collection is missing;
-- required evidence fields have invalid types;
-- `confidence` is outside the range `0..1`;
-- or an unsupported evidence type is returned.
-
-This creates a structured boundary between probabilistic model inference and deterministic application logic.
-
-The result is a typed, validated evidence representation that downstream agents can inspect and reference.
-
-### Agent 2 — Competency Mapper
-
-The **Competency Mapper** is the inference boundary of the MidPath workflow.
-
-Its responsibility is to determine what competency level is supported by the evidence produced in the previous stage.
-
-A critical architectural constraint is that the Competency Mapper **does not receive the original engineering artifacts**.
+A key constraint is that it does not receive the original engineering
+artifacts.
 
 It receives only:
 
-1. the explicit competency rubric; and
-2. the validated `EvidenceAnalysis`.
+the competency rubric;
 
-This prevents the mapping stage from independently reinterpreting the source artifacts and bypassing the evidence representation established by the Evidence Analyst.
+the validated EvidenceAnalysis.
 
-#### Input
-
-```ts
-{
-  caseId: string;
-  rubric: string;
-  evidenceAnalysis: EvidenceAnalysis;
+interface CompetencyAssessment {
+  competency: string;
+  level: number;
+  evidenceIds: string[];
+  missingEvidence: string[];
+  justification: string;
 }
-```
+This prevents the mapper from bypassing the evidence layer and
+independently reinterpreting source artifacts.
 
-The rubric defines the competencies that must be evaluated.
+For every competency it records:
 
-The evidence analysis defines the observations that the mapper is allowed to use.
+assigned level;
 
-The mapper is explicitly instructed to use only supplied evidence, avoid inventing implementation details or guarantees, and avoid creating competencies that are not present in the rubric.
+supporting Evidence IDs;
 
-#### Output
+missing evidence for stronger conclusions;
 
-The Competency Mapper produces a structured `CompetencyMapping`:
+grounded justification.
 
-```ts
-{
-  caseId: string;
-  assessments: Array<{
-    competency: string;
-    level: number;
-    evidenceIds: string[];
-    missingEvidence: string[];
-    justification: string;
-  }>;
-}
-```
+Referential Integrity
+Every referenced Evidence ID is checked against the Evidence Analyst
+output.
 
-A competency assessment therefore contains more than a level.
-
-It records:
-
-- the competency being evaluated;
-- the assigned level;
-- the Evidence IDs supporting that assessment;
-- evidence that would be required to justify a stronger conclusion;
-- and a grounded justification.
-
-This makes the assessment inspectable rather than reducing the evaluation to an isolated numeric score.
-
-#### Reasoning Boundary
-
-The Competency Mapper answers:
-
-> **“What competency level is supported by the available evidence?”**
-
-It does not answer:
-
-> **“What else might be true about the implementation?”**
-
-The agent is explicitly instructed not to invent tests, infrastructure, runtime behavior, implementation details, or engineering guarantees that are absent from the supplied evidence.
-
-It must also distinguish ordinary successful behavior from stronger reliability guarantees.
-
-For example, evidence that a sequential request succeeds cannot automatically establish concurrency safety, just as a successful happy path cannot automatically establish transactional recovery behavior.
-
-When the available evidence is insufficient to justify a stronger level, the mapper records the relevant gap in `missingEvidence`.
-
-#### Evidence Referential Integrity
-
-Evidence references produced by the model are validated against the actual Evidence IDs created by the upstream Evidence Analyst.
-
-For each assessment:
-
-```text
 Competency Assessment
         ↓
 evidenceIds[]
@@ -347,1018 +223,694 @@ evidenceIds[]
 Validated against
         ↓
 EvidenceAnalysis.evidence[].id
-```
+Unknown Evidence IDs are rejected.
 
-An assessment cannot successfully reference an Evidence ID that does not exist in the current evidence analysis.
+The mapper must also assess every rubric competency exactly once,
+introduce no unknown competencies, avoid duplicates, and return integer
+levels within the supported 0..3 range.
 
-This creates a deterministic referential boundary around an otherwise probabilistic inference step.
-
-#### Rubric Conformance
-
-The application also validates the structure of the competency mapping.
-
-The implementation requires:
-
-- every competency defined by the rubric to be assessed exactly once;
-- no additional competencies;
-- no duplicate competency assessments;
-- integer competency levels within the supported `0..3` range;
-- structured `evidenceIds` and `missingEvidence` collections;
-- and a textual justification for each assessment.
-
-The rubric itself is parsed before the mapping can be accepted, and malformed rubric input is rejected.
-
-Together, these checks prevent structurally invalid model output from silently entering the next stage of the evaluation pipeline.
-
-#### Transient Failure Handling
-
-The Competency Mapper also distinguishes between transient provider failures and exhausted quota.
-
-Transient model errors such as `503 / UNAVAILABLE` are retried with bounded incremental delay.
-
-Quota exhaustion is treated as non-retryable, preventing repeated requests when immediate retry cannot resolve the failure.
-
-This behavior keeps infrastructure failure handling separate from engineering evaluation logic.
-
-The resulting `CompetencyMapping` is therefore a structured inference layer between validated engineering evidence and downstream verification.
-
-### Agent 3 — Verification Agent
-
-The **Verification Agent** is the supportability and traceability boundary of the MidPath workflow.
+Agent 3 --- Verification Agent
+The Verification Agent is the supportability and traceability
+boundary.
 
 It receives:
 
-1. the competency rubric;
-2. the validated `EvidenceAnalysis`;
-3. the `CompetencyMapping` produced by the previous stage.
+the rubric;
 
-Like the Competency Mapper, it **does not receive the original engineering artifacts**.
+validated evidence;
 
-Its task is not to independently restart the analysis.
+the competency mapping.
 
-Its task is to verify whether the existing competency conclusions remain justified by the available evidence.
+It does not receive the original artifacts or the benchmark gold
+standard.
 
-#### Input
+Its question is:
 
-```ts
-{
-  caseId: string;
-  rubric: string;
-  evidenceAnalysis: EvidenceAnalysis;
-  competencyMapping: CompetencyMapping;
+"Are these conclusions actually supported by the evidence available
+in this evaluation?"
+
+The agent can preserve, correct, or reduce unsupported competency
+conclusions and can surface evidence-linked critical findings.
+
+interface CriticalFinding {
+  severity: "low" | "medium" | "high" | "critical";
+  competency: string;
+  summary: string;
+  evidenceIds: string[];
 }
-```
+Both assessments and critical findings must reference Evidence IDs that
+exist in the current evidence analysis.
 
-This gives the Verification Agent access to both the evidence layer and the inference layer.
-
-It can therefore inspect whether competency levels, justifications, and evidence references remain consistent with the evidence that actually exists.
-
-#### Output
-
-The Verification Agent produces a structured `VerificationResult`:
-
-```ts
-{
-  caseId: string;
-
-  assessments: Array<{
-    competency: string;
-    level: number;
-    evidenceIds: string[];
-    missingEvidence: string[];
-    justification: string;
-  }>;
-
-  criticalFindings: Array<{
-    severity:
-      | "low"
-      | "medium"
-      | "high"
-      | "critical";
-    competency: string;
-    summary: string;
-    evidenceIds: string[];
-  }>;
-
-  verificationNotes: string[];
-}
-```
-
-The output therefore contains three forms of verified information:
-
-- competency assessments;
-- critical engineering findings;
-- verification notes describing important observations about the evaluation.
-
-#### Reasoning Boundary
-
-The Verification Agent answers:
-
-> **“Are these conclusions actually supported by the evidence available in this evaluation?”**
-
-It is explicitly instructed to challenge unsupported conclusions.
-
-The verification rules allow it to:
-
-- preserve a competency level when the supplied evidence supports it;
-- reduce a level when the evidence does not justify the stronger conclusion;
-- remove or correct unsupported claims;
-- identify critical engineering findings when those findings are supported by the evidence;
-- and record verification observations without inventing new artifacts or implementation details.
-
-This makes verification a separate reasoning stage rather than a request for the model to merely agree with the previous assessment.
-
-#### No Hidden Answer Access
-
-The Verification Agent is explicitly instructed not to compare the evaluation against a hidden reference answer.
-
-It receives the rubric, evidence analysis, and competency mapping — but not the benchmark gold standard.
-
-This keeps the verification stage separate from benchmark scoring.
-
-The gold standard is used later by the evaluation harness to measure the quality of the completed workflow, not by the agent to produce its answer.
-
-#### Evidence Traceability
-
-Both verified competency assessments and critical findings must use Evidence IDs produced by the Evidence Analyst.
-
-For verified assessments:
-
-```text
-Verified Assessment
+Verified Evaluation
         ↓
-evidenceIds[]
+Evidence IDs
         ↓
-Validated against
+Structured Evidence
         ↓
-EvidenceAnalysis.evidence[].id
-```
+Submitted Artifacts
+Verification does not guarantee objective correctness.
 
-For critical findings:
+It makes the reasoning inspectable, constrained, and traceable.
 
-```text
-Critical Finding
-        ↓
-evidenceIds[]
-        ↓
-Validated against
-        ↓
-EvidenceAnalysis.evidence[].id
-```
+Experimental Design
+MidPath is evaluated with explicit benchmark cases and independently
+defined reference expectations.
 
-Unknown Evidence IDs are rejected by deterministic application validation.
+The benchmark asks whether an evaluator can:
 
-This creates an explicit evidence chain from the final verification output back to the structured observations produced at the beginning of the workflow.
+recover competency conclusions supported by submitted artifacts;
 
-#### Critical Findings
+identify important engineering risks;
 
-The Verification Agent can surface engineering risks using four supported severity levels:
+distinguish tested behavior from stronger guarantees;
 
-```text
-low
-medium
-high
-critical
-```
+preserve a traceable evidence chain.
 
-Every critical finding must:
+Gold Standard Isolation
+Each benchmark case contains a predefined gold standard.
 
-- reference a competency defined in the rubric;
-- contain a textual summary;
-- use a supported severity level;
-- and reference Evidence IDs that exist in the current evidence analysis.
+The gold standard is not supplied to the Baseline Evaluator,
+Evidence Analyst, Competency Mapper, or Verification Agent.
 
-This allows MidPath to distinguish between an ordinary competency assessment and an engineering weakness that deserves explicit attention.
-
-A critical finding is therefore not simply a lower competency score.
-
-It is a separate, evidence-linked statement about an important reliability, correctness, or engineering risk observed during verification.
-
-#### Runtime Validation
-
-MidPath validates the Verification Agent response before accepting it as the final workflow output.
-
-The implementation requires:
-
-- the expected `caseId`;
-- every rubric competency to appear exactly once;
-- no unknown or duplicate competencies;
-- integer competency levels within the supported `0..3` range;
-- valid assessment evidence references;
-- valid critical finding evidence references;
-- supported critical finding severity values;
-- critical findings to reference known rubric competencies;
-- structured `missingEvidence` collections;
-- textual assessment justifications;
-- and string-only verification notes.
-
-Malformed rubric input or structurally invalid model output is rejected.
-
-This prevents unsupported response structure from silently becoming part of the final evaluation.
-
-#### Verification as a Distinct Stage
-
-The complete reasoning path is therefore:
-
-```text
-Engineering Artifacts
-        ↓
-Evidence Analyst
-        ↓
-Validated Evidence
-        ↓
-Competency Mapper
-        ↓
-Evidence-Grounded Assessment
-        ↓
-Verification Agent
-        ↓
-Verified Assessments
-+ Critical Findings
-+ Verification Notes
-```
-
-The Verification Agent closes the MidPath reasoning loop by testing whether the inferred engineering judgment remains connected to the evidence from which it originated.
-
-It does not guarantee that the model's reasoning is objectively correct.
-
-It does make the reasoning **inspectable, constrained, and traceable**.
-
----
-
-## Experimental Methodology
-
-MidPath AI is evaluated using explicit benchmark cases with independently defined reference expectations.
-
-The purpose of the benchmark is not merely to determine whether an evaluator produces plausible prose.
-
-It is to measure whether the evaluator can recover engineering conclusions that are supported by the submitted artifacts, identify important engineering risks, and preserve a traceable evidence chain.
-
-### Gold Standard
-
-Each benchmark case contains a structured **gold standard** representing the expected engineering assessment for that case.
-
-The gold standard is authored independently of the evaluator output and is not supplied to the Baseline evaluator or to any MidPath agent during inference.
-
-It is used only after an evaluation has completed, when the evaluation harness compares the produced result against the reference expectations.
-
-The experimental separation is therefore:
-
-```text
 Task + Artifacts + Rubric
           ↓
-      Evaluator
+       Evaluator
           ↓
     Produced Result
 
 -------------------------
 
-    Gold Standard
-          +
-    Produced Result
-          ↓
-     Offline Scoring
-```
+Gold Standard + Produced Result
+              ↓
+        Offline Scoring
+Gold standards contain expected competency levels, supporting evidence,
+missing evidence, justification, and a reference critical finding.
 
-This prevents the evaluation workflow from using the expected benchmark answer as evidence for its own conclusions.
+They are defined before evaluator execution.
 
-#### Gold Standard Structure
+Completed benchmark outputs are treated as frozen experimental
+observations rather than repeatedly regenerated until a favorable
+answer appears.
 
-A gold standard contains more than expected numeric levels.
+This reduces post-hoc tuning pressure in a probabilistic evaluation
+environment.
 
-For each competency, it records:
+Benchmark Cases
+The cases are intentionally compact enough to inspect while requiring
+engineering judgment beyond observing that tests pass.
 
-```ts
-{
-  competency: string;
-  expected_level: number;
-  label: string;
-  supported_evidence: Array<{
-    artifact: string;
-    observation: string;
-  }>;
-  missing_evidence: string[];
-  justification: string;
-}
-```
+Case Engineering Domain Hidden Gap
 
-This allows the reference assessment to represent both sides of an engineering judgment:
+001 --- Idempotency Concurrency / Sequential correctness
+reliability does not establish
+concurrency safety
 
-- what the submitted artifacts actually demonstrate;
-- and what evidence is still absent for a stronger conclusion.
+002 --- Transaction Persistence / Happy-path success does
+Consistency transactions not establish atomic
+multi-write behavior
 
-The benchmark therefore does not treat competency assessment as a simple classification problem detached from engineering reasoning.
+Case 001 --- Idempotency Reliability
+Primary risk: concurrent duplicate payment processing.
 
-#### Critical Finding Reference
+The implementation handles sequential reuse of an idempotency key, and
+the supplied tests verify that behavior.
 
-Each case can also define a reference critical finding containing:
+The artifacts do not demonstrate an atomic boundary around:
 
-```ts
-{
-  id: string;
-  severity: string;
-  competency: string;
-  summary: string;
-  evidence: Array<{
-    artifact: string;
-    observation: string;
-  }>;
-  failure_scenario: string[];
-  expected_diagnostic_conclusion: string;
-}
-```
-
-The critical finding represents the engineering weakness that the case is specifically designed to test.
-
-It includes not only the expected category and severity, but also the artifact evidence and failure scenario that justify the conclusion.
-
-#### Example — Idempotency Reliability
-
-In the idempotency benchmark, the submitted implementation demonstrates successful **sequential duplicate handling**.
-
-The gold standard intentionally does not treat that behavior as proof of concurrency-safe idempotency.
-
-The reference assessment recognizes evidence that:
-
-- an existing idempotency record is reused;
-- a sequential duplicate request returns the original payment;
-- and the common retry path is covered by tests.
-
-But it also records missing evidence for:
-
-- atomic idempotency claims;
-- concurrency-safe duplicate protection;
-- database-level uniqueness;
-- and concurrent duplicate-request testing.
-
-The critical reference finding is therefore:
-
-> **The implementation demonstrates sequential idempotency behavior but does not provide sufficient evidence of concurrency-safe idempotency.**
-
-The associated failure scenario makes the hidden reliability gap explicit:
-
-```text
-Request A checks the key → no record
-Request B checks the same key → no record
-
-Request A creates a payment
-Request B creates another payment
-
-Only afterward are idempotency records persisted
-```
-
-The benchmark therefore evaluates whether an assessment can distinguish **tested behavior** from the stronger engineering guarantee that the tests do not establish.
-
-#### Predefined Before Evaluation
-
-Gold standards are defined before evaluator execution and completed benchmark outputs are treated as frozen experimental results rather than repeatedly regenerated until a favorable answer appears.
-
-This reduces post-hoc tuning pressure and keeps the benchmark reference independent from model output.
-
-The gold standard is therefore an **evaluation instrument**, not an input to the agentic reasoning process.
-
-## Benchmark Case Design
-
-The benchmark cases are designed to test whether an evaluator can distinguish **observable successful behavior** from **stronger engineering guarantees that are not demonstrated by the submitted artifacts**.
-
-Each case contains:
-
-- an engineering task;
-- implementation artifacts;
-- test artifacts;
-- an explicit competency rubric;
-- a predefined gold standard;
-- and one primary engineering weakness that the evaluator is expected to identify.
-
-The cases are intentionally small enough to remain inspectable, but each contains a failure mode that requires engineering judgment beyond simply observing that the provided tests pass.
-
-### Case 001 — Idempotency Reliability
-
-**Primary risk:** concurrent duplicate payment processing.
-
-The implementation correctly handles sequential requests using the same idempotency key.
-
-The supplied tests verify this behavior.
-
-However, the workflow performs the relevant operations separately:
-
-```text
 Check idempotency key
         ↓
 Create payment
         ↓
 Persist idempotency record
-```
+The benchmark tests whether the evaluator distinguishes:
 
-The submitted artifacts do not demonstrate an atomic boundary around these operations.
+"Sequential duplicate requests are handled correctly."
 
-Two concurrent requests can therefore observe the same key as absent before either request persists the idempotency record.
+from:
 
-The benchmark evaluates whether the evaluator distinguishes:
+"Duplicate payment processing is prevented under concurrency."
 
-> “Sequential duplicate requests are handled correctly.”
+The gold-standard critical competency is IDEMPOTENCY_RELIABILITY.
 
-from the stronger conclusion:
+Case 002 --- Transaction Consistency
+Primary risk: partial writes across multiple persistence operations.
 
-> “Duplicate payment processing is prevented under concurrency.”
-
-The first conclusion is supported by the artifacts.
-
-The second is not.
-
-The gold-standard critical finding is therefore associated with **IDEMPOTENCY_RELIABILITY** and identifies the missing concurrency-safe idempotency guarantee.
-
-### Case 002 — Transaction Consistency
-
-**Primary risk:** partial writes across multiple persistence operations.
-
-The implementation performs several state-changing operations during a single business workflow.
-
-Conceptually:
-
-```text
 Create Order
      ↓
 Decrease Inventory
      ↓
 Create Payment Attempt
-```
+The tests cover expected behavior and input validation, but the
+artifacts do not demonstrate a transaction boundary, rollback mechanism,
+compensation strategy, or equivalent atomicity guarantee.
 
-The supplied tests demonstrate the expected successful path and several input-validation behaviors.
+The gold-standard critical competency is TRANSACTION_RELIABILITY.
 
-However, the submitted artifacts do not demonstrate a transaction boundary, rollback mechanism, compensation strategy, or equivalent atomicity guarantee across these writes.
+Case 003 --- Authorization Boundary
+Primary risk: missing resource-level ownership validation.
 
-A failure after an earlier write can therefore leave the system in a partially updated state.
+The implementation validates authentication and resource existence, but
+does not demonstrate that the authenticated user owns the profile being
+modified.
 
-The benchmark evaluates whether the evaluator distinguishes:
-
-> “The expected workflow succeeds under the tested conditions.”
-
-from:
-
-> “The workflow preserves consistency when one of its persistence operations fails.”
-
-The second guarantee requires evidence that the submitted artifacts do not provide.
-
-The gold-standard critical finding is therefore associated with **TRANSACTION_RELIABILITY** and identifies the partial-write consistency risk.
-
-### Case 003 — Authorization Boundary
-
-**Primary risk:** missing resource-level ownership validation.
-
-The implementation receives both an authenticated user identifier and a profile identifier.
-
-It validates that the user is authenticated, loads the requested profile, validates the update data, and performs the update.
-
-However, the submitted artifacts do not demonstrate that the authenticated user is verified as the owner of the profile being modified.
-
-Conceptually, the implementation establishes:
-
-```text
 Authenticated User
         ↓
 Profile Exists
         ↓
 Update Profile
-```
+The missing guarantee is:
 
-but does not establish:
-
-```text
 Authenticated User
         ↓
 Owns Requested Profile
         ↓
 Update Profile
-```
+The gold-standard critical competency is AUTHORIZATION_RELIABILITY.
 
-The supplied tests exercise expected update and validation behavior, but they do not exercise a cross-user ownership scenario.
+Why Multiple Failure Classes?
+The benchmark deliberately moves across concurrency, transaction
+consistency, and authorization.
 
-The benchmark therefore evaluates whether the evaluator distinguishes **authentication** from **resource-level authorization**.
+A workflow that succeeds only on one idempotency example could simply be
+responding to terminology specific to that case.
 
-The gold-standard critical finding is associated with **AUTHORIZATION_RELIABILITY** and identifies the missing ownership check.
+The broader principle is:
 
-### Why Multiple Cases?
+Observed behavior should not be promoted into a stronger engineering
+guarantee without supporting evidence.
 
-The three cases exercise different engineering failure classes:
+Baseline Evaluator
+The benchmark includes a deliberately simple non-agentic baseline.
 
-| Case | Engineering Domain | Hidden Gap |
-|---|---|---|
-| **001** | Idempotency / Concurrency | Sequential correctness does not establish concurrency safety |
-| **002** | Persistence / Transactions | Happy-path success does not establish atomic multi-write behavior |
-| **003** | Authorization | Authentication does not establish resource ownership |
+The baseline receives the same task, rubric, implementation artifact,
+and test artifact, then performs a direct model evaluation in a single
+inference step.
 
-This diversity is intentional.
-
-A workflow that succeeds only on the idempotency example could simply be responding to terminology or patterns specific to that case.
-
-Using independent failure classes provides a stronger test of whether the evaluation workflow consistently applies the underlying principle:
-
-> **Observed behavior should not be promoted into a stronger engineering guarantee without supporting evidence.**
-
----
-
-## Baseline Evaluator
-
-The benchmark includes a deliberately simple **Baseline Evaluator** used as the experimental control for the MidPath workflow.
-
-The baseline is not agentic.
-
-It performs a direct model evaluation using the benchmark task, rubric, and submitted engineering artifacts in a single inference step.
-
-Conceptually:
-
-```text
-Task
-  +
-Rubric
-  +
-Engineering Artifacts
-  ↓
-Single Model Evaluation
-  ↓
-Competency Assessments
-  +
-Critical Findings
-```
-
-This provides a reference point for evaluating what changes when the same engineering assessment problem is processed through MidPath's structured evidence-driven workflow.
-
-### Baseline Input
-
-For each benchmark case, the Baseline Evaluator receives:
-
-```text
-Task
-Rubric
-Implementation Artifact
-Test Artifact
-```
-
-Unlike the MidPath workflow, the baseline has direct access to the original engineering artifacts during its assessment.
-
-It is therefore able to inspect the implementation and tests directly.
-
-However, it does not construct an intermediate evidence representation before assigning competency levels.
-
-### Single-Step Evaluation
-
-The baseline performs the engineering assessment in one model interaction.
-
-Its reasoning path is conceptually:
-
-```text
-Engineering Artifacts
-        ↓
-Direct Model Reasoning
-        ↓
-Competency Assessment
-```
-
-MidPath instead introduces explicit intermediate boundaries:
-
-```text
-Engineering Artifacts
-        ↓
-Evidence Analyst
-        ↓
-Validated Evidence
-        ↓
-Competency Mapper
-        ↓
-Evidence-Grounded Assessment
-        ↓
-Verification Agent
-        ↓
-Verified Assessment
-```
-
-The comparison therefore evaluates two different assessment architectures:
-
-| Baseline | MidPath |
-|---|---|
-| Single inference step | Multi-stage agentic workflow |
-| Direct artifact access | Evidence representation between stages |
-| No explicit Evidence ID chain | Evidence-linked conclusions |
-| Assessment produced directly | Assessment independently verified |
-| Critical findings produced directly | Critical findings verified against structured evidence |
-
-The purpose of the comparison is not to assume that a multi-agent workflow must produce higher competency-score accuracy.
-
-Instead, the experiment measures whether introducing explicit evidence and verification boundaries changes the **accuracy, engineering-risk detection, and auditability** of the resulting assessment.
-
-### Output
-
-The baseline produces structured JSON containing:
-
-```ts
-{
-  case_id: string;
-
-  competency_assessments: Array<{
-    competency: string;
-    level: number;
-    justification: string;
-    evidence: Array<{
-      artifact: string;
-      observation: string;
-    }>;
-    missing_evidence: string[];
-  }>;
-
-  critical_findings: Array<{
-    severity: string;
-    competency: string;
-    summary: string;
-    evidence: Array<{
-      artifact: string;
-      observation: string;
-    }>;
-  }>;
-}
-```
-
-The output intentionally contains similar assessment concepts to the MidPath result so that both systems can be compared against the same gold standard.
-
-The internal reasoning architecture, however, remains different.
-
-### No Gold Standard Access
-
-The Baseline Evaluator does **not** receive the benchmark gold standard during inference.
-
-The experimental separation is:
-
-```text
 Task + Rubric + Artifacts
           ↓
-   Baseline Evaluator
+Single Model Evaluation
           ↓
-    Baseline Result
+Competency Assessments
++ Critical Findings
+Baseline vs. MidPath
+Baseline MidPath
 
-----------------------------
+Single inference step Multi-stage agentic workflow
 
-Gold Standard
-      +
-Baseline Result
-      ↓
-Offline Scoring
-```
+Direct artifact access Explicit evidence representation
 
-This is the same benchmark isolation principle used for MidPath.
+Natural-language artifact evidence Stable Evidence ID chain
 
-Neither evaluation path is allowed to use the expected benchmark answer to construct its assessment.
+Assessment produced directly Assessment independently verified
 
-### Frozen Experimental Outputs
+The experiment does not assume that a multi-agent workflow must
+produce higher classification accuracy.
 
-Model inference is probabilistic.
+It asks:
 
-Repeated executions of the same benchmark can therefore produce different competency levels, justifications, or critical findings.
+What does an explicit evidence-driven and independently verified
+workflow add to direct model evaluation?
 
-For that reason, completed benchmark outputs are treated as **frozen experimental observations**.
+This distinction matters because a capable model may already identify
+engineering risks directly from source code.
 
-Once a benchmark execution has been accepted as the recorded run, its result is stored under:
+Evaluation & Scoring
+Scoring happens offline after an evaluation result has been recorded.
 
-```text
-evaluation/results/baseline/
-```
+The benchmark measures four dimensions:
 
-and is not repeatedly regenerated until a more favorable result appears.
+Competency Exact Match
 
-This prevents post-hoc selection from silently turning model stochasticity into benchmark optimization.
+Mean Absolute Error (MAE)
 
-The same principle is applied to completed MidPath results.
+Critical Finding Detection
 
-### Why the Baseline Matters
+Evidence Traceability Coverage
 
-Without a baseline, it would be difficult to distinguish the contribution of the MidPath architecture from the underlying capability of the language model itself.
-
-A capable model may already identify some engineering risks directly from source artifacts.
-
-The relevant experimental question is therefore not:
-
-> “Can an LLM identify this engineering problem?”
-
-It is:
-
-> “What does an explicit evidence-driven and independently verified workflow add to direct model evaluation?”
-
-The benchmark evaluates that question using the same cases, competency rubrics, gold standards, and offline scoring methodology for both evaluation paths.
-
----
-
-## Evaluation & Scoring
-
-Benchmark outputs are evaluated offline against the predefined gold standard.
-
-The scoring layer is intentionally separated from model inference.
-
-Neither the Baseline Evaluator nor the MidPath workflow receives benchmark scores, expected competency levels, or gold-standard findings while producing an assessment.
-
-Only after an evaluation result has been recorded does the scoring harness compare it with the corresponding reference.
-
-The benchmark currently evaluates four dimensions:
-
-1. **Competency Exact Match**
-2. **Mean Absolute Error**
-3. **Critical Finding Detection**
-4. **Evidence Traceability Coverage**
-
-These metrics measure different properties of an engineering assessment and should not be collapsed into a single notion of quality.
-
-### 1. Competency Exact Match
-
-For each competency, the predicted level is compared directly with the expected gold-standard level.
-
-For competency \(i\):
-
-```text
-ExactMatch(i) =
-    1, if predictedLevel(i) = expectedLevel(i)
-    0, otherwise
-```
-
-The aggregate exact-match rate is:
-
-```text
+Competency Exact Match
 Exact Match Rate
 =
 Exact Competency Matches
 ────────────────────────
 Total Compared Competencies
-```
+Higher is better.
 
-For example:
-
-```text
-Expected:  [2, 1, 2, 2, 1]
-Predicted: [2, 1, 2, 3, 1]
-
-Exact Matches = 4 / 5
-Exact Match Rate = 0.80
-```
-
-Exact match is deliberately strict.
-
-A prediction that differs from the reference by one level is still counted as incorrect.
-
-This makes it useful for measuring classification agreement, but it does not express how far an incorrect prediction is from the reference.
-
-### 2. Mean Absolute Error
-
-To capture the magnitude of competency-level disagreement, the benchmark also calculates **Mean Absolute Error (MAE)**.
-
-For each competency:
-
-```text
-Absolute Error
-=
-| predictedLevel - expectedLevel |
-```
-
-Across all compared competencies:
-
-```text
+Mean Absolute Error
 MAE
 =
 Σ | predictedLevel - expectedLevel |
 ───────────────────────────────────
       Number of Competencies
-```
+Lower is better.
 
-Using the previous example:
+Exact Match is strict classification agreement. MAE additionally shows
+how far incorrect predictions are from the reference.
 
-```text
-Expected:  [2, 1, 2, 2, 1]
-Predicted: [2, 1, 2, 3, 1]
+Critical Finding Detection
+The scorer asks two separate questions:
 
-Absolute Errors:
-[0, 0, 0, 1, 0]
+Did the evaluator produce a critical finding for the expected
+competency?
 
-MAE = 1 / 5 = 0.20
-```
+If so, did the severity match the gold standard?
 
-Lower MAE indicates closer agreement with the reference competency levels.
-
-Exact Match Rate and MAE therefore provide complementary information:
-
-| Metric | Measures | Better Direction |
-|---|---|---|
-| **Exact Match Rate** | How often the predicted level exactly matches the reference | Higher |
-| **Mean Absolute Error** | How far predictions deviate from the reference | Lower |
-
-### 3. Critical Finding Detection
-
-Each benchmark case defines one reference critical engineering finding associated with a target competency and expected severity.
-
-The scoring layer evaluates two separate questions:
-
-```text
-Was a critical finding detected
-for the expected competency?
-
-            ↓
-
-If yes, did its severity
-match the gold standard?
-```
-
-This produces:
-
-```ts
 {
   detected: boolean;
   severityMatched: boolean;
 }
-```
+This preserves the distinction between recognizing the correct risk
+domain and estimating its severity correctly.
 
-A finding is considered detected when the evaluator produces a critical finding associated with the expected competency.
+Evidence Traceability Coverage
+For MidPath, downstream conclusions are checked against the valid
+Evidence IDs produced by the Evidence Analyst.
 
-Severity agreement is evaluated independently.
-
-This distinction matters because an evaluator can recognize the correct engineering risk category while still misjudging its severity.
-
-For example:
-
-```text
-Expected:
-AUTHORIZATION_RELIABILITY / high
-
-Produced:
-AUTHORIZATION_RELIABILITY / medium
-```
-
-would result in:
-
-```text
-detected        = true
-severityMatched = false
-```
-
-This preserves more information than reducing critical-risk evaluation to a single pass/fail value.
-
-### 4. Evidence Traceability Coverage
-
-MidPath also measures whether its downstream conclusions retain references to concrete evidence produced by the Evidence Analyst.
-
-For every MidPath result, the scoring harness first constructs the set of valid Evidence IDs from:
-
-```text
-EvidenceAnalysis.evidence[].id
-```
-
-It then checks whether each assessment or critical finding contains at least one Evidence ID that resolves to that set.
-
-Conceptually:
-
-```text
-Downstream Conclusion
-        ↓
-evidenceIds[]
-        ↓
-At least one valid reference?
-        ↓
-EvidenceAnalysis.evidence[].id
-```
-
-Traceability coverage is calculated as:
-
-```text
 Traceability Coverage
 =
 Traceable Items
 ───────────────
 Total Items
-```
+A downstream item is traceable when it contains at least one Evidence ID
+that resolves to the evidence analysis for that execution.
 
-An item is traceable when:
+Traceability is measured separately for:
 
-1. it contains at least one evidence reference; and
-2. at least one referenced Evidence ID exists in the evidence analysis for that execution.
+competency assessments;
 
-MidPath reports traceability separately for:
+critical findings.
 
-```text
-Competency Assessments
-Critical Findings
-```
+Traceability Is Not Accuracy
+A conclusion can be traceable and still be incorrect.
 
-This prevents traceability from being hidden inside a general score.
+A direct evaluator can also reach a correct conclusion without producing
+MidPath's Evidence ID chain.
 
-### Traceability Is Not Accuracy
+Therefore:
 
-Traceability coverage and competency accuracy measure different properties.
-
-A conclusion can be perfectly traceable and still be incorrect.
-
-Similarly, a direct model evaluation can reach the correct answer without producing the same structured Evidence ID chain.
-
-For that reason, MidPath does **not** treat traceability coverage as a substitute for benchmark accuracy.
-
-The distinction is:
-
-```text
 Accuracy
-    ↓
-Did the conclusion match
-the benchmark reference?
-
+    ≠
 Traceability
+Traceability is reported as an architectural auditability property of
+MidPath, not as an apples-to-apples accuracy advantage over the
+Baseline.
+
+Benchmark Results
+The current frozen benchmark results are:
+
+Case Evaluator Exact Match MAE Critical Severity Traceability
+Risk Match
+Detected
+
+001 --- Baseline 60% 0.40 Yes Yes ---
+Idempotency
+
+              MidPath                   60%         0.40 Yes        Yes        100%
+                                                                               assessments /
+                                                                               100% findings
+002 --- Baseline 80% 0.20 Yes Yes ---
+Transaction
+Consistency
+
+              MidPath                   80%         0.20 Yes        Yes        100%
+                                                                               assessments /
+                                                                               100% findings
+003 --- Baseline 40% 0.60 Yes No ---
+Authorization
+Boundary
+
+              MidPath       **Unavailable**          --- ---        ---        ---
+What the Results Show
+The completed paired runs do not show a competency-classification
+accuracy advantage for MidPath.
+
+That result is important.
+
+In Cases 001 and 002, Baseline and MidPath produced the same Exact Match
+Rate and MAE.
+
+Both also detected the expected critical engineering-risk domain and
+matched its severity.
+
+MidPath's measurable distinction in those completed runs is
+traceability:
+
+Case 001
+Assessment Traceability      5 / 5 = 100%
+Critical Finding Traceability 3 / 3 = 100%
+
+Case 002
+Assessment Traceability      5 / 5 = 100%
+Critical Finding Traceability 2 / 2 = 100%
+This supports a narrower and more defensible conclusion:
+
+MidPath did not outperform the direct baseline on competency-score
+accuracy in the completed paired cases, but it produced a fully
+resolvable structured evidence chain for its downstream assessments
+and critical findings.
+
+That is an architectural result, not a claim of general model
+superiority.
+
+Case 003 Status
+The Baseline completed Case 003 with:
+
+Exact Match Rate = 40%
+MAE              = 0.60
+Critical domain  = detected
+Severity         = mismatched
+The corresponding MidPath run was not completed because the external
+model provider's free-tier request quota was exhausted during the
+multi-stage workflow.
+
+The missing result is represented as unavailable, not converted into
+a zero score and not replaced by repeated inference using a different
+model.
+
+This preserves comparability with the frozen runs.
+
+Interpretation
+The experiment suggests three useful observations.
+
+1. A direct model can already identify important engineering risks
+The Baseline detected the target critical-risk competency in all three
+recorded Baseline runs.
+
+MidPath should therefore not be justified by claiming that direct LLM
+evaluation is incapable of engineering reasoning.
+
+2. Multi-stage reasoning does not automatically improve classification accuracy
+Cases 001 and 002 produced identical competency metrics for Baseline and
+MidPath.
+
+Adding agents is not, by itself, evidence of better evaluation.
+
+3. Explicit evidence boundaries create inspectable provenance
+MidPath's completed outputs retained valid Evidence ID references across
+all scored competency assessments and critical findings.
+
+This creates a property the direct baseline was not architected to
+provide in the same form:
+
+machine-checkable provenance across reasoning stages.
+
+The benchmark therefore separates three dimensions:
+
+Classification Quality
+        +
+Engineering-Risk Recognition
+        +
+Evidence Auditability
+No single dimension is treated as proof of overall superiority.
+
+Failure Handling & Experimental Integrity
+MidPath distinguishes model-provider failures from
+engineering-evaluation results.
+
+Transient 503 / UNAVAILABLE failures can be retried with bounded
+delay.
+
+Quota exhaustion is treated as non-retryable.
+
+This prevents infrastructure failures from being mistaken for assessment
+conclusions and avoids repeatedly consuming requests when immediate
+retry cannot resolve the problem.
+
+The project also follows these experimental rules:
+
+gold standards are defined before evaluation;
+
+Baseline and MidPath use the same benchmark cases;
+
+expected answers are not supplied during inference;
+
+completed outputs are frozen;
+
+results are not repeatedly regenerated to select favorable samples;
+
+unavailable executions remain unavailable;
+
+accuracy and traceability are reported separately.
+
+Reproducibility
+Requirements
+Node.js 22+
+
+npm
+
+a Gemini API key
+
+Install
+npm install
+Create a local .env file:
+
+GEMINI_API_KEY=your_gemini_api_key_here
+The real .env file is ignored by Git.
+
+Run Tests
+npm test
+Run a Baseline Evaluation
+Default case:
+
+npm run baseline
+For a specific benchmark case in PowerShell:
+
+$env:CASE_ID="case-002-transaction-consistency"
+npm run baseline
+Run MidPath
+Default case:
+
+npm run midpath
+For a specific case in PowerShell:
+
+$env:CASE_ID="case-002-transaction-consistency"
+npm run midpath
+Score a Case
+node --import tsx evaluation/scoring/run-scoring.ts
+When selecting a specific case:
+
+$env:CASE_ID="case-002-transaction-consistency"
+node --import tsx evaluation/scoring/run-scoring.ts
+Aggregate Available Results
+node --import tsx evaluation/scoring/aggregate-results.ts
+The aggregator discovers benchmark cases and reports whichever frozen
+Baseline and MidPath results are currently available.
+
+Repository Structure
+midpath-ai/
+├── docs/
+├── evaluation/
+│   ├── baseline/
+│   │   ├── prompts/
+│   │   └── run-baseline.ts
+│   ├── cases/
+│   │   ├── case-001-idempotency/
+│   │   ├── case-002-transaction-consistency/
+│   │   └── case-003-authorization-boundary/
+│   ├── results/
+│   │   ├── baseline/
+│   │   └── midpath/
+│   └── scoring/
+│       ├── aggregate-results.ts
+│       ├── run-scoring.ts
+│       ├── score-result.test.ts
+│       └── score-result.ts
+├── src/
+│   ├── agents/
+│   │   ├── competency/
+│   │   ├── evidence/
+│   │   └── verification/
+│   ├── application/
+│   │   └── evaluation/
+│   └── infrastructure/
+├── .env.example
+├── package.json
+└── README.md
+Design Decisions
+Why not let every agent read the source code?
+Because that would weaken the evidence boundary.
+
+After evidence extraction, downstream agents operate on the structured
+evidence representation rather than independently reconstructing their
+own interpretation of the artifacts.
+
+Why validate model output in application code?
+LLM output is probabilistic.
+
+The workflow therefore uses deterministic validation for structural
+contracts such as:
+
+valid JSON;
+
+known case IDs;
+
+known competencies;
+
+valid level ranges;
+
+supported severities;
+
+valid Evidence ID references.
+
+Why preserve missing evidence?
+Engineering competency is often defined as much by what cannot be
+demonstrated as by what can.
+
+missingEvidence makes that uncertainty explicit instead of allowing
+absence of proof to become proof of a stronger guarantee.
+
+Why keep a simple Baseline?
+Without it, the project could not separate the value of the workflow
+architecture from the capability of the underlying model.
+
+Limitations
+This prototype intentionally has a narrow experimental scope.
+
+Small Benchmark
+The current benchmark contains three handcrafted cases.
+
+The results are useful for validating the architecture and evaluation
+method, but they are not sufficient to establish broad statistical
+superiority.
+
+Probabilistic Inference
+Model responses can vary between executions.
+
+Frozen outputs reduce post-hoc selection, but a stronger future
+experiment should include repeated runs with controlled sampling and
+confidence intervals.
+
+Traceability Measures Referential Coverage
+Current traceability scoring verifies whether downstream conclusions
+resolve to valid Evidence IDs.
+
+It does not prove that every cited piece of evidence semantically
+entails the conclusion.
+
+A future version should evaluate both referential and semantic
+traceability.
+
+Baseline and MidPath Evidence Schemas Differ
+The Baseline contains natural-language artifact evidence, while MidPath
+uses an explicit intermediate Evidence ID architecture.
+
+For that reason, current traceability coverage is not presented as a
+direct Baseline-vs-MidPath accuracy metric.
+
+External Provider Constraints
+Agentic workflows require multiple model calls per evaluation and
+therefore have greater exposure to provider quotas and transient
+availability than a single-call baseline.
+
+Case 003 demonstrated this operational trade-off directly.
+
+Future Work
+The current prototype establishes the evidence-first evaluation loop.
+
+Natural extensions include:
+
+larger and independently authored benchmark suites;
+
+repeated-run statistical evaluation;
+
+semantic evidence-entailment scoring;
+
+confidence calibration;
+
+richer engineering artifacts such as pull requests, CI logs,
+schemas, and architecture decisions;
+
+remediation recommendations grounded in missing evidence;
+
+reassessment after targeted engineering interventions;
+
+persistent evidence storage and longitudinal competency tracking;
+
+model/provider comparison under the same frozen benchmark.
+
+The long-term direction is a closed loop:
+
+Assessment
     ↓
-Can the conclusion be connected
-to concrete structured evidence?
-```
+Diagnosis
+    ↓
+Targeted Intervention
+    ↓
+Verification
+    ↓
+Evidence Delta
+    ↓
+Updated Assessment
+Technical Stack
+TypeScript
 
-The current Baseline output contains artifact-level natural-language evidence, but it does not use the same intermediate Evidence ID architecture as MidPath.
+Node.js
 
-Traceability coverage is therefore reported as a property of the MidPath architecture rather than presented as an apples-to-apples accuracy advantage over the Baseline.
+Vitest
 
-### Per-Case Aggregation
+Google GenAI SDK
 
-The benchmark aggregator discovers available evaluation cases from:
+Gemini
 
-```text
-evaluation/cases/
-```
+structured JSON model outputs
 
-and checks independently whether Baseline and MidPath outputs exist for each case.
+deterministic runtime validation
 
-Results are loaded from:
+evidence-linked multi-agent orchestration
 
-```text
-evaluation/results/baseline/
-evaluation/results/midpath/
-```
+Project Thesis
+MidPath is based on a simple engineering principle:
 
-For every available evaluation result, the aggregator normalizes competency assessments and compares them against that case's gold standard.
+Successful execution is not the same thing as demonstrated
+reliability.
 
-The resulting per-case structure is conceptually:
+A test can show that a scenario passed.
 
-```ts
-{
-  caseId: string;
+An artifact can show that an implementation exists.
 
-  baseline?: {
-    competency: {
-      total: number;
-      exactMatches: number;
-      exactMatchRate: number;
-      meanAbsoluteError: number;
-    };
+An LLM can produce a plausible assessment.
 
-    criticalFinding: {
-      detected: boolean;
-      severityMatched: boolean;
-    };
-  };
+But an engineering-readiness system should be able to answer a harder
+question:
 
-  midpath?: {
-    competency: {
-      total: number;
-      exactMatches: number;
-      exactMatchRate: number;
-      meanAbsoluteError: number;
-    };
+What conclusion is actually justified by the available evidence?
 
-    criticalFinding: {
-      detected: boolean;
-      severityMatched: boolean;
-    };
+MidPath makes that question explicit, preserves the evidence chain
+through the evaluation workflow, and measures the result against a
+predefined benchmark rather than treating plausible AI output as
+sufficient.
 
-    traceability: {
-      assessments: {
-        totalItems: number;
-        traceableItems: number;
-        coverage: number;
-      };
+Current Prototype Status
+Evidence Analyst: implemented
 
-      criticalFindings: {
-        totalItems: number;
-        traceableItems: number;
-        coverage: number;
-      };
-    };
-  };
-}
-```
+Competency Mapper: implemented
 
-The use of optional Baseline and MidPath results is intentional.
+Verification Agent: implemented
 
-A case can remain part of the benchmark even when one evaluation path could not complete because of an external execution constraint.
+deterministic output validation: implemented
 
-Missing output is therefore represented as **unavailable**, not silently converted into a zero score.
+non-agentic Baseline: implemented
 
-### Metric Interpretation
+Gold Standard benchmark methodology: implemented
 
-The benchmark metrics should be read together:
+three benchmark cases: implemented
 
-| Metric | Question |
-|---|---|
-| **Exact Match Rate** | Did the competency classifications match the reference? |
-| **MAE** | How far were incorrect classifications from the reference? |
-| **Critical Finding Detection** | Did the evaluator identify the expected engineering-risk domain? |
-| **Severity Match** | Did it estimate the expected risk severity? |
-| **Traceability Coverage** | Can MidPath conclusions be resolved back to structured Evidence IDs? |
+automated competency scoring: implemented
 
-No single metric is intended to establish overall superiority.
+critical-finding scoring: implemented
 
-The goal is to evaluate **classification quality, engineering-risk recognition, and evidence auditability as separate dimensions**.
+traceability scoring: implemented
+
+cross-case result aggregation: implemented
+
+Case 001 paired evaluation: complete
+
+Case 002 paired evaluation: complete
+
+Case 003 Baseline evaluation: complete
+
+Case 003 MidPath evaluation: unavailable due to provider quota
+during the recorded experiment
+
+Passing tests tell us what happened in the tested scenario. MidPath
+tells us what engineering conclusions the available evidence can
+actually support.
