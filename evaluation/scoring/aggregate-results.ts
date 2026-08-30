@@ -31,15 +31,39 @@ interface BaselineResult {
         competency: string;
         level: number;
     }>;
+    critical_findings: Array<{
+        severity: string;
+        competency: string;
+        summary: string;
+        evidence: unknown[];
+    }>;
 }
 
 interface MidPathResult {
     caseId: string;
     workflow: {
+        evidenceAnalysis: {
+            evidence: Array<{
+                id: string;
+                artifact: string;
+                observation: string;
+                evidenceType: string;
+                confidence: number;
+            }>;
+        };
         competencyMapping: {
             assessments: Array<{
                 competency: string;
                 level: number;
+                evidenceIds?: string[];
+            }>;
+        };
+        verification: {
+            criticalFindings: Array<{
+                severity: string;
+                competency: string;
+                summary: string;
+                evidenceIds: string[];
             }>;
         };
     };
@@ -66,8 +90,42 @@ interface CompetencyMetrics {
 
 interface AggregatedCaseResult {
     caseId: string;
-    baseline?: CompetencyMetrics;
-    midpath?: CompetencyMetrics;
+
+    baseline?: {
+        competency: CompetencyMetrics;
+        criticalFinding: CriticalFindingMetrics;
+    };
+
+    midpath?: {
+        competency: CompetencyMetrics;
+        criticalFinding: CriticalFindingMetrics;
+        traceability: {
+            assessments: TraceabilityMetrics;
+            criticalFindings: TraceabilityMetrics;
+        };
+    };
+}
+
+interface CriticalFindingMetrics {
+    detected: boolean;
+    severityMatched: boolean;
+}
+
+interface TraceabilityMetrics {
+    totalItems: number;
+    traceableItems: number;
+    coverage: number;
+}
+
+function normalizeMidPathCriticalFindings(
+    result: MidPathResult
+): NormalizedCriticalFinding[] {
+    return result.workflow.verification.criticalFindings.map(
+        (finding) => ({
+            competency: finding.competency,
+            severity: finding.severity
+        })
+    );
 }
 
 function readJson<T>(filePath: string): T {
@@ -107,6 +165,77 @@ function normalizeGoldStandard(
             level: assessment.expected_level
         })
     );
+}
+
+function normalizeBaselineCriticalFindings(
+    result: BaselineResult
+): NormalizedCriticalFinding[] {
+    return result.critical_findings.map(
+        (finding) => ({
+            competency: finding.competency,
+            severity: finding.severity
+        })
+    );
+}
+
+function calculateCriticalFindingMetrics(
+    actual: NormalizedCriticalFinding[],
+    expected: NormalizedCriticalFinding
+): CriticalFindingMetrics {
+    const matchingFinding = actual.find(
+        (finding) =>
+            finding.competency ===
+            expected.competency
+    );
+
+    if (!matchingFinding) {
+        return {
+            detected: false,
+            severityMatched: false
+        };
+    }
+
+    return {
+        detected: true,
+        severityMatched:
+            matchingFinding.severity ===
+            expected.severity
+    };
+}
+
+function calculateTraceabilityMetrics(
+    items: Array<{
+        evidenceIds?: string[];
+    }>,
+    validEvidenceIds: Set<string>
+): TraceabilityMetrics {
+    const traceableItems = items.filter(
+        (item) => {
+            const evidenceIds =
+                item.evidenceIds ?? [];
+
+            if (evidenceIds.length === 0) {
+                return false;
+            }
+
+            return evidenceIds.some(
+                (evidenceId) =>
+                    validEvidenceIds.has(
+                        evidenceId
+                    )
+            );
+        }
+    ).length;
+
+    return {
+        totalItems: items.length,
+        traceableItems,
+        coverage:
+            items.length === 0
+                ? 0
+                : traceableItems /
+                items.length
+    };
 }
 
 function calculateCompetencyMetrics(
@@ -236,13 +365,37 @@ const aggregatedResults: AggregatedCaseResult[] =
                     baselinePath
                 );
 
-            result.baseline =
-                calculateCompetencyMetrics(
-                    normalizeBaseline(
-                        baselineResult
-                    ),
-                    normalizedGold
+            const normalizedBaseline =
+                normalizeBaseline(
+                    baselineResult
                 );
+
+            const normalizedBaselineFindings =
+                normalizeBaselineCriticalFindings(
+                    baselineResult
+                );
+
+            result.baseline = {
+                competency:
+                    calculateCompetencyMetrics(
+                        normalizedBaseline,
+                        normalizedGold
+                    ),
+                criticalFinding:
+                    calculateCriticalFindingMetrics(
+                        normalizedBaselineFindings,
+                        {
+                            competency:
+                                goldStandard
+                                    .critical_finding
+                                    .competency,
+                            severity:
+                                goldStandard
+                                    .critical_finding
+                                    .severity
+                        }
+                    )
+            };
         }
 
         if (summary.midpathAvailable) {
@@ -257,13 +410,62 @@ const aggregatedResults: AggregatedCaseResult[] =
                     midpathPath
                 );
 
-            result.midpath =
-                calculateCompetencyMetrics(
-                    normalizeMidPath(
-                        midpathResult
-                    ),
-                    normalizedGold
+            const normalizedMidPath =
+                normalizeMidPath(
+                    midpathResult
                 );
+
+            const normalizedMidPathFindings =
+                normalizeMidPathCriticalFindings(
+                    midpathResult
+                );
+
+            const validEvidenceIds = new Set(
+                midpathResult.workflow.evidenceAnalysis.evidence.map(
+                    (evidence) => evidence.id
+                )
+            );
+
+            result.midpath = {
+                competency:
+                    calculateCompetencyMetrics(
+                        normalizedMidPath,
+                        normalizedGold
+                    ),
+
+                criticalFinding:
+                    calculateCriticalFindingMetrics(
+                        normalizedMidPathFindings,
+                        {
+                            competency:
+                                goldStandard
+                                    .critical_finding
+                                    .competency,
+                            severity:
+                                goldStandard
+                                    .critical_finding
+                                    .severity
+                        }
+                    ),
+
+                traceability: {
+                    assessments:
+                        calculateTraceabilityMetrics(
+                            midpathResult.workflow
+                                .competencyMapping
+                                .assessments,
+                            validEvidenceIds
+                        ),
+
+                    criticalFindings:
+                        calculateTraceabilityMetrics(
+                            midpathResult.workflow
+                                .verification
+                                .criticalFindings,
+                            validEvidenceIds
+                        )
+                }
+            };
         }
 
         return result;
