@@ -880,6 +880,85 @@ node --import tsx evaluation/scoring/aggregate-results.ts
 
 The aggregator discovers benchmark cases and reports the frozen Baseline and MidPath results that are available.
 
+### Benchmark Data
+
+All benchmark artifacts required for reproduction are versioned in the repository under:
+
+```text
+evaluation/cases/
+├── case-001-idempotency/
+├── case-002-transaction-consistency/
+└── case-003-authorization-boundary/
+```
+
+Each case contains the engineering artifacts and predefined evaluation material required by the benchmark.
+
+The recorded evaluator outputs are stored separately under:
+
+```text
+evaluation/results/
+├── baseline/
+└── midpath/
+```
+
+Completed recorded outputs are intentionally frozen and should not be regenerated merely to obtain a different stochastic model response.
+
+### Expected Outputs
+
+A successful evaluator execution produces a structured assessment for the selected benchmark case.
+
+The scoring command reports metrics including:
+
+- Exact Match Rate;
+- Mean Absolute Error (MAE);
+- critical-domain detection;
+- severity match;
+- MidPath evidence traceability where applicable.
+
+The aggregation step reports the available frozen results across benchmark cases.
+
+For the recorded experiment, the expected high-level results are:
+
+| Case | Baseline | MidPath |
+|---|---|---|
+| Case 001 — Idempotency | 60% exact match, MAE 0.40 | 60% exact match, MAE 0.40, 100% traceability |
+| Case 002 — Transaction Consistency | 80% exact match, MAE 0.20 | 80% exact match, MAE 0.20, 100% traceability |
+| Case 003 — Authorization Boundary | 40% exact match, MAE 0.60 | Unavailable in the recorded experiment due to provider quota |
+
+Case 003 MidPath unavailability is part of the recorded experimental result and must not be interpreted as a zero score.
+
+### Runtime and Cost
+
+Runtime depends primarily on external model latency and provider availability.
+
+The local deterministic test suite normally completes in a few seconds on the development environment.
+
+Baseline evaluation requires a single primary model-evaluation step, while MidPath performs multiple model-dependent stages and therefore takes longer and consumes more provider requests.
+
+The recorded hackathon experiment used the Gemini free tier, so the direct model API cost for the recorded runs was:
+
+```text
+USD $0
+```
+
+The practical constraint was provider quota rather than monetary cost. Case 003 demonstrated this limitation when the MidPath multi-stage execution could not complete after the free-tier quota was exhausted.
+
+Approximate runtime should therefore be treated as provider-dependent rather than a deterministic benchmark measurement.
+
+### Development Environment
+
+The final prototype was developed and validated with:
+
+```text
+Node.js: 22.19.0
+npm: 10.9.3
+Git: 2.50.0.windows.2
+```
+
+The project requires Node.js 22 or newer.
+
+No credentials are committed to the repository. Create the local `.env` file from `.env.example` and provide your own Gemini API key.
+
 ---
 
 ## Repository Structure
